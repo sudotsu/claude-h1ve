@@ -6,6 +6,85 @@
 
 ---
 
+## The difference
+
+**Without claude-h1ve — every session, every machine:**
+
+> **You:** I need help with my project
+>
+> **Claude:** I'd be happy to help! Could you tell me about your project and what stack you're working with?
+>
+> **You:** *[re-explains everything. again.]*
+
+New terminal. Different machine. Context window cleared. Same conversation.
+You're not just re-explaining your project — you're re-explaining *you*.
+Your preferences, your stack, your OS, your tools, your standards, what you were in the middle of.
+Every. Single. Time.
+
+---
+
+**With claude-h1ve — what Claude reads automatically at session start:**
+
+```
+# My Laptop — Claude Instructions
+
+## Machine
+- Framework 13, Intel Core i7-1370P, 32GB RAM, Fedora 40
+- Role: primary dev machine
+
+## Tools
+- Node.js v22 (nvm), pnpm, Python 3.12, Claude Code, gh
+
+## System Notes
+- Firewall active, DNS-over-TLS configured
+```
+
+```
+# memory/projects.md
+
+## api-refactor
+- Status: in progress
+- Last worked on: laptop, 2025-01-14
+- Done: JWT access tokens working
+- Next: refresh token rotation
+```
+
+```
+# shared/CLAUDE-shared.md (appended to every machine file)
+
+## User Preferences
+- Direct and efficient — no lengthy explanations unless asked
+- Practical solutions over theoretical ones
+- Run commands directly, never hand tasks back to the user
+```
+
+**Same conversation now:**
+
+> **You:** I need help with my project
+>
+> **Claude:** You're on the JWT middleware — access tokens are done, refresh rotation is next.
+> You're on your laptop (Fedora 40, Node 22, pnpm). What's the issue?
+
+---
+
+**Switch machines. Pick up where you left off.**
+
+You finish a session on your laptop, run `sync.sh`. Tomorrow you sit down at your desktop.
+Claude has already read the updated memory files. It knows what's done and what's next —
+without you saying a word.
+
+```
+~/hive/scripts/sync.sh
+# Commits: "sync: laptop 2025-01-14-2243"
+# Pushes to GitHub
+
+# Next day, desktop:
+~/hive/scripts/sync.sh
+# Pulls latest — desktop Claude now knows everything laptop Claude knew
+```
+
+---
+
 ## How it works
 
 Claude Code loads `~/.claude/CLAUDE.md` as global instructions at the start of every session. claude-h1ve replaces that file with a symlink into this repo:
