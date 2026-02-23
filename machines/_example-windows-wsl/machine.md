@@ -26,19 +26,15 @@
 - Windows home: `C:\Users\<username>\`
 - WSL home: `/home/<username>/`
 - Hive (WSL): `~/hive/`
-- Claude config (WSL): `~/.claude/` (CLAUDE.md symlinked to machines/_example-windows/CLAUDE.md)
+- Claude config (WSL): `~/.claude/` (CLAUDE.md symlinked to machines/_example-windows-wsl/CLAUDE.md)
 
 ## System Notes
 - Windows Defender exclusions set for WSL2 dev directories (speeds up builds)
 - Commands requiring Windows-level elevation (not WSL sudo) need a PowerShell admin window — flag these explicitly rather than silently skipping
 
 ## Hook Setup
-**Running Claude Code in WSL2** (this example): use the standard Linux pattern:
+Claude Code runs inside WSL2 — hooks use the standard Linux pattern:
 ```bash
 cp ~/hive/shared/settings.json ~/.claude/settings.json
 ```
-
-**Running Claude Code in native Windows (Git Bash + WSL installed)**: the hook runner
-resolves `/bin/bash` to the WSL shim which can't find Git Bash paths. Use the
-PowerShell→Git Bash wrapper instead — see `templates/new-machine-setup.md` Step 7
-for the exact config.
+For native Windows (Git Bash, not WSL2), see `machines/_example-windows-native/`.

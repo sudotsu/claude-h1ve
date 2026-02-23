@@ -1,6 +1,6 @@
-<!-- AUTO-GENERATED FILE — DO NOT EDIT DIRECTLY. Source: machines/_example-windows/machine.md + shared/CLAUDE-shared.md. Run scripts/propagate.sh to rebuild. -->
+<!-- AUTO-GENERATED FILE — DO NOT EDIT DIRECTLY. Source: machines/_example-windows-native/machine.md + shared/CLAUDE-shared.md. Run scripts/propagate.sh to rebuild. -->
 
-# My Windows Machine — Claude Instructions
+# My Windows Machine (Native) — Claude Instructions
 
 ## Machine
 - **Model**: Dell XPS 15 9530
@@ -8,42 +8,72 @@
 - **RAM**: 32GB
 - **GPU**: NVIDIA RTX 4060 + Intel Iris Xe
 - **Storage**: 1TB NVMe SSD
-- **Role**: Gaming + heavy compute
+- **Role**: Primary dev machine
 
 ## OS
 - **Windows**: Windows 11 Pro 23H2
-- **WSL2**: Ubuntu 22.04
+- **WSL2**: Ubuntu 22.04 (installed but Claude Code runs natively, not inside WSL)
 
 ## Environment
-- **Claude Code running in**: WSL2 — symlink and hooks live inside WSL
-- **Primary shell**: WSL2 (Ubuntu) for dev work, PowerShell for Windows-native tasks
+- **Claude Code running in**: Native Windows with Git Bash as shell
+- **Primary shell**: Git Bash (`C:/Program Files/Git/bin/bash.exe`)
 
-## Tools Installed
-- **Node.js**: v22.x LTS (via nvm inside WSL2)
-- **Python**: 3.12 (via pyenv inside WSL2)
-- **Claude Code**: latest (global, via npm inside WSL2)
-- **git**: 2.43 (WSL2) / **gh**: 2.45 (WSL2)
+## Tools Installed (Windows-native)
+- **Node.js**: v22.x LTS (Windows installer) / npm latest
+- **Python**: 3.12 (Windows installer)
+- **Claude Code**: latest (global, via npm — `npm install -g @anthropic-ai/claude-code`)
+- **git**: latest (git-scm.com) / **gh**: latest (cli.github.com)
 
 ## Important Paths
 - Windows home: `C:\Users\<username>\`
-- WSL home: `/home/<username>/`
-- Hive (WSL): `~/hive/`
-- Claude config (WSL): `~/.claude/` (CLAUDE.md symlinked to machines/_example-windows/CLAUDE.md)
+- Git Bash equivalent: `/c/Users/<username>/`
+- Hive repo: `C:\Users\<username>\hive\` (also `/c/Users/<username>/hive/` in Git Bash)
+- Claude config: `C:\Users\<username>\.claude\` (CLAUDE.md symlinked to machines/_example-windows-native/CLAUDE.md)
 
-## System Notes
-- Windows Defender exclusions set for WSL2 dev directories (speeds up builds)
-- Commands requiring Windows-level elevation (not WSL sudo) need a PowerShell admin window — flag these explicitly rather than silently skipping
+## Windows-Specific Notes
+- Paths use forward slashes in Git Bash (`/c/Users/<username>/`) but backslashes in native Windows
+- Some operations require elevated PowerShell (admin) — Claude will tell you exactly what to run rather than silently skipping
+- **Hooks use a PowerShell→Git Bash wrapper** (see Hook Setup below) — do NOT copy `shared/settings.json` directly, it will break silently
 
 ## Hook Setup
-**Running Claude Code in WSL2** (this example): use the standard Linux pattern:
-```bash
-cp ~/hive/shared/settings.json ~/.claude/settings.json
+Claude Code's hook runner resolves `/bin/bash` to the WSL shim (`C:\Windows\System32\bash.exe`),
+not Git Bash. The WSL shim cannot resolve Git Bash paths, so standard hooks silently fail.
+
+Fix: create `C:\Users\<username>\.claude\settings.json` manually with the PowerShell wrapper:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "powershell.exe -NoProfile -Command \"& 'C:/Program Files/Git/bin/bash.exe' 'C:/Users/<username>/hive/scripts/session-start.sh'\"",
+          "timeout": 15
+        }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "powershell.exe -NoProfile -Command \"& 'C:/Program Files/Git/bin/bash.exe' 'C:/Users/<username>/hive/scripts/sync.sh'\"",
+          "timeout": 30
+        }]
+      }
+    ]
+  }
+}
 ```
 
-**Running Claude Code in native Windows (Git Bash + WSL installed)**: the hook runner
-resolves `/bin/bash` to the WSL shim which can't find Git Bash paths. Use the
-PowerShell→Git Bash wrapper instead — see `templates/new-machine-setup.md` Step 7
-for the exact config.
+Replace `<username>` with your Windows username. This bypasses the WSL shim entirely by
+routing through PowerShell to invoke Git Bash directly by full path.
+
+**Why this is necessary:** Three bash binaries exist on Windows+WSL in PATH priority order:
+`C:\Windows\System32\bash.exe` (WSL shim) → WSL app alias → `C:\Program Files\Git\bin\bash.exe` (Git Bash).
+Node.js (which runs Claude Code) finds the WSL shim first. The shim cannot resolve
+Git Bash-style paths (`/c/Users/...`) or Windows paths (`C:\Users\...`). The PowerShell
+wrapper bypasses this entirely.
 
 ---
 <!-- SHARED — synced from ~/hive/shared/CLAUDE-shared.md -->
