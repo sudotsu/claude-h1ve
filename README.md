@@ -34,9 +34,6 @@ Every. Single. Time.
 
 ## Tools
 - Node.js v22 (nvm), pnpm, Python 3.12, Claude Code, gh
-
-## System Notes
-- Firewall active, DNS-over-TLS configured
 ```
 
 ```
@@ -44,13 +41,12 @@ Every. Single. Time.
 
 ## api-refactor
 - Status: in progress
-- Last worked on: laptop, 2025-01-14
 - Done: JWT access tokens working
 - Next: refresh token rotation
 ```
 
 ```
-# shared/CLAUDE-shared.md (appended to every machine file)
+# shared/CLAUDE-shared.md (built into every machine's CLAUDE.md)
 
 ## User Preferences
 - Direct and efficient — no lengthy explanations unless asked
@@ -69,39 +65,62 @@ Every. Single. Time.
 
 **Switch machines. Pick up where you left off.**
 
-You finish a session on your laptop, run `sync.sh`. Tomorrow you sit down at your desktop.
-Claude has already read the updated memory files. It knows what's done and what's next —
-without you saying a word.
-
-```
-~/hive/scripts/sync.sh
-# Commits: "sync: laptop 2025-01-14-2243"
-# Pushes to GitHub
-
-# Next day, desktop:
-~/hive/scripts/sync.sh
-# Pulls latest — desktop Claude now knows everything laptop Claude knew
-```
+Sessions end, the hive syncs automatically. Next machine you sit down at, Claude already
+knows what was done and what's next — without you saying a word.
 
 ---
 
 ## How it works
 
-Claude Code loads `~/.claude/CLAUDE.md` as global instructions at the start of every session. claude-h1ve replaces that file with a symlink into this repo:
+### The file Claude reads
+
+Claude Code loads `~/.claude/CLAUDE.md` as global instructions at the start of every session.
+claude-h1ve replaces that file with a symlink into this repo:
 
 ```
-~/.claude/CLAUDE.md
-        │
-        └──symlink──▶  ~/hive/machines/your-machine/CLAUDE.md
-                                │
-                                └── shared rules from
-                                    ~/hive/shared/CLAUDE-shared.md
-                                    (propagated by scripts/propagate.sh)
+machines/<name>/machine.md  ──┐
+                               ├──▶ propagate.sh ──▶ machines/<name>/CLAUDE.md
+shared/CLAUDE-shared.md    ──┘                              │
+                                                         symlink
+                                                            │
+                                                   ~/.claude/CLAUDE.md
+                                                   (Claude reads this)
 ```
 
-Each machine has its own file: hardware specs, installed tools, OS-specific notes. Shared rules — your preferences, engineering standards, session protocol — live in one place and push to every machine file with one command.
+`machine.md` is the editable source — your hardware specs, installed tools, OS-specific notes.
+`CLAUDE-shared.md` is the source of truth for rules shared across all machines — preferences,
+engineering standards, session protocol.
 
-Memory files capture what matters between sessions: what's set up where, active projects, decisions made. Every Claude instance reads them on start. The hive stays current.
+`CLAUDE.md` is a **generated artifact**. `propagate.sh` builds it by concatenating both sources.
+Never edit `CLAUDE.md` directly — changes are silently overwritten on the next build.
+
+### The hooks
+
+Two Claude Code hooks automate the sync lifecycle:
+
+```
+Session starts
+    │
+    └──▶ UserPromptSubmit hook ──▶ session-start.sh ──▶ git pull (once per session)
+
+Session ends
+    │
+    └──▶ Stop hook ──▶ sync.sh ──▶ propagate.sh ──▶ git add -A ──▶ commit + push
+```
+
+Every session starts with the latest hive state pulled from GitHub.
+Every session ends with any changes committed and pushed automatically.
+
+### The memory layer
+
+Memory files live in `memory/` and are read by Claude on every session start:
+
+| File | What goes here |
+|------|----------------|
+| `memory/shared.md` | Machine status, cross-machine environment notes |
+| `memory/projects.md` | Active projects, what's done, what's next |
+| `memory/decisions.md` | Architectural decisions — so future sessions don't re-debate settled questions |
+| `memory/kb.md` | Gotchas, system behaviors, fixes worth knowing again — strict schema enforced |
 
 ---
 
@@ -117,7 +136,8 @@ Memory files capture what matters between sessions: what's set up where, active 
 
 **Requires:** [Claude Code](https://claude.ai/code) · [GitHub CLI](https://cli.github.com/) · git
 
-**Step 1:** Click **"Use this template"** → **"Create a new repository"** (top right of this page). Name it `claude-h1ve`, set visibility to your preference.
+**Step 1:** Click **"Use this template"** → **"Create a new repository"** (top right of this page).
+Name it `claude-h1ve`, set visibility to your preference.
 
 **Step 2:** Run the installer (replace `YOUR-USERNAME`):
 
@@ -135,12 +155,17 @@ gh repo clone YOUR-USERNAME/claude-h1ve ~/hive
 **Step 3:** Fill in your machine file:
 
 ```
-~/hive/machines/your-machine-name/CLAUDE.md
+~/hive/machines/your-machine-name/machine.md
 ```
 
-Hardware, OS, installed tools. The shared section is already appended. See `machines/_example-linux/` or `machines/_example-windows/` for reference.
+Hardware, OS, installed tools, hook setup. See `machines/_example-linux/`,
+`machines/_example-windows-wsl/`, or `machines/_example-windows-native/` for filled examples.
+Then rebuild: `bash ~/hive/scripts/propagate.sh`
 
-Done. Every Claude Code session on this machine now reads from the hive.
+**Step 4:** Set up hooks so sessions auto-pull and auto-sync. See `templates/new-machine-setup.md` Step 5
+for both Linux/WSL2 and native Windows variants.
+
+Done. Every Claude Code session on this machine now reads from the hive and syncs on exit.
 
 ---
 
@@ -157,61 +182,78 @@ gh repo clone YOUR-USERNAME/claude-h1ve ~/hive
 
 ## Day-to-day
 
-**End of session — sync everything:**
+**Hooks handle it automatically** — if wired up, you don't need to run anything manually.
+
+**Manual sync (mid-session or if hooks aren't set up):**
 ```bash
 ~/hive/scripts/sync.sh
 ```
-Commits any updates with hostname + timestamp. Pushes. Every other machine gets it on next pull.
+Stashes local changes, pulls latest, restores, rebuilds CLAUDE.md files, commits with
+hostname + timestamp, pushes. If a merge conflict is detected, halts with a clear error
+and recovery instructions.
 
-**Updated shared rules — push to all machines:**
+**After editing shared rules:**
 ```bash
 ~/hive/scripts/propagate.sh
 ```
-Rewrites the shared section of every machine CLAUDE.md from `shared/CLAUDE-shared.md`.
+Rebuilds `CLAUDE.md` for every machine from `machine.md` + `shared/CLAUDE-shared.md`.
 
 ---
 
 ## Repo structure
 
 ```
-install.sh              One-command installer (run after forking)
-machines/               Per-machine CLAUDE.md files
-  _example-linux/       Reference: Linux / WSL setup
-  _example-windows/     Reference: Windows setup
+install.sh                    One-command installer (run after forking)
+machines/                     Per-machine profiles
+  _example-linux/             Reference: Linux setup
+  _example-windows-wsl/       Reference: Windows + Claude Code in WSL2
+  _example-windows-native/    Reference: Windows + Claude Code in Git Bash (native)
+  <your-machine>/
+    machine.md                Editable source — your specs and notes
+    CLAUDE.md                 Generated artifact — never edit directly
 memory/
-  shared.md             Cross-machine state (what's set up where)
-  projects.md           Active work and what's next
-  decisions.md          Architectural and workflow decisions
+  shared.md                   Cross-machine state
+  projects.md                 Active work and what's next
+  decisions.md                Architectural and workflow decisions
+  kb.md                       Knowledge base — gotchas and fixes, strict schema
 shared/
-  CLAUDE-shared.md      Source of truth for rules shared across all machines
+  CLAUDE-shared.md            Source of truth for shared rules across all machines
+  settings.json               Hook config template (Linux / WSL2)
 scripts/
-  new-machine.sh        Automate new machine setup + symlink
-  sync.sh               Pull → commit → push
-  propagate.sh          Push shared rules to all machine CLAUDE.md files
+  new-machine.sh              Create machine profile + symlink
+  session-start.sh            Hook: pull hive once per session on first prompt
+  sync.sh                     Hook: propagate + commit + push on session end
+  propagate.sh                Build CLAUDE.md artifacts from source files
 templates/
-  machine-template.md   Blank machine file to fill in
+  machine-template.md         Blank machine.md to fill in
+  new-machine-setup.md        Full manual setup guide (all platforms)
+handoffs/                     Cross-agent delegation (Claude ↔ Gemini ↔ etc.)
+  archive/                    Resolved handoffs — permanent record, never deleted
+projects/                     Project-scoped CLAUDE.md files (symlinked into working dirs)
 agents/
-  claude/               Claude Code config notes
-  gemini/               Gemini CLI — same pattern, uses GEMINI.md
+  claude/                     Claude Code conventions and constraints
+  gemini/                     Gemini CLI — same pattern, uses GEMINI.md
 ```
 
 ---
 
-## Memory files
+## Cross-agent handoffs
 
-Claude reads these at the start of every session (as instructed in `CLAUDE-shared.md`). Keep them current.
+When one agent hits a wall or needs a second opinion, it creates a handoff file in `handoffs/`.
+The receiving agent reads it, responds, and moves it to `handoffs/archive/`.
 
-| File | What goes here |
-|---|---|
-| `memory/shared.md` | Which machines are set up, key cross-machine decisions |
-| `memory/projects.md` | Active projects, status, what's next |
-| `memory/decisions.md` | Architectural and workflow decisions — so future sessions don't re-debate settled questions |
+Session start automatically scans `handoffs/` (root only — not archive) for open handoffs
+addressed to the current agent.
+
+See `handoffs/README.md` for the full protocol and `handoffs/template.md` to create one.
 
 ---
 
 ## Multi-agent support
 
-Gemini CLI uses `GEMINI.md` the same way Claude uses `CLAUDE.md`. The `agents/gemini/` directory documents how to wire it into the same hive. Same memory files, same sync workflow, no conflicts.
+Gemini CLI uses `GEMINI.md` the same way Claude uses `CLAUDE.md`. The `agents/gemini/`
+directory documents how to wire it into the same hive. Same memory files, same sync
+workflow, no conflicts.
 
 See `agents/gemini/instructions.md` for setup.
 
