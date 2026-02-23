@@ -1,9 +1,10 @@
 # [Machine Name] — Claude Instructions
 
 <!--
-  Fill in your machine details below.
-  The shared section is appended automatically by new-machine.sh or propagate.sh.
-  See machines/_example-linux/ or machines/_example-windows/ for filled examples.
+  This is machine.md — the editable source file for this machine.
+  Fill in your specs below, then run scripts/propagate.sh to generate CLAUDE.md.
+  CLAUDE.md is a build artifact — never edit it directly.
+  See machines/_example-linux/ or machines/_example-windows-wsl/ for filled examples.
 -->
 
 ## Machine
@@ -15,24 +16,29 @@
 - **Role**: [e.g. primary dev, portable, gaming/compute]
 
 ## OS
-- **OS**:
-- **Version**:
+- **Primary**: [OS name, version]
+- **Secondary**: [WSL2 distro, or dual-boot OS — if applicable]
 
 ## Tools Installed
 <!-- List tools with versions and how they were installed -->
 - **Node.js**:
 - **Python**:
-- **Package manager**: [preference, e.g. pnpm / npm / pip]
+- **Package manager**: [e.g. pnpm / npm]
 - **Claude Code**:
 - **git / gh**:
 
-## System Notes
-<!-- Firewall, DNS config, quirks, anything Claude should know about this environment -->
-
 ## Important Paths
 - Hive: `~/hive/`
--
+- Claude config: `~/.claude/` (CLAUDE.md symlinked to this machine's CLAUDE.md)
 
----
-<!-- SHARED — synced from ~/hive/shared/CLAUDE-shared.md -->
-<!-- DO NOT edit below this line manually — run scripts/propagate.sh instead -->
+## OS-Specific Notes
+<!-- Shell type, admin access quirks, path conventions, anything Claude needs
+     to run commands correctly on this machine -->
+
+## Hook Setup
+<!-- Which hook pattern does this machine use?
+     Linux / WSL2: cp ~/hive/shared/settings.json ~/.claude/settings.json
+     Native Windows (Git Bash): see machines/_example-windows-native/machine.md -->
+
+## System Optimizations Applied
+<!-- Fill in after running an optimization sweep. List every change made. -->

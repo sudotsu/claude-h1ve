@@ -1,13 +1,15 @@
 #!/bin/bash
 # Sets up a new machine in the hive
 # Usage: ./scripts/new-machine.sh <machine-name>
+#
+# Creates machines/<name>/machine.md from template, builds CLAUDE.md via
+# propagate.sh, and symlinks ~/.claude/CLAUDE.md to the generated file.
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 TEMPLATE="$REPO_DIR/templates/machine-template.md"
-SHARED="$REPO_DIR/shared/CLAUDE-shared.md"
 MACHINE_NAME="${1:-}"
 
 if [ -z "$MACHINE_NAME" ]; then
@@ -17,23 +19,26 @@ if [ -z "$MACHINE_NAME" ]; then
 fi
 
 MACHINE_DIR="$REPO_DIR/machines/$MACHINE_NAME"
-MACHINE_FILE="$MACHINE_DIR/CLAUDE.md"
+MACHINE_FILE="$MACHINE_DIR/machine.md"
+CLAUDE_FILE="$MACHINE_DIR/CLAUDE.md"
 CLAUDE_CONFIG="$HOME/.claude/CLAUDE.md"
 
 if [ -d "$MACHINE_DIR" ]; then
   echo "Machine '$MACHINE_NAME' already exists at $MACHINE_DIR"
-  echo "To re-link the symlink: ln -sf $MACHINE_FILE $CLAUDE_CONFIG"
+  echo "To re-link the symlink: ln -sf $CLAUDE_FILE $CLAUDE_CONFIG"
   exit 1
 fi
 
-# Create machine file from template + shared section
+# Create machine.md from template
 mkdir -p "$MACHINE_DIR"
 cp "$TEMPLATE" "$MACHINE_FILE"
+echo "Created: $MACHINE_FILE"
 
-printf '\n---\n<!-- SHARED — synced from ~/hive/shared/CLAUDE-shared.md -->\n\n' >> "$MACHINE_FILE"
-cat "$SHARED" >> "$MACHINE_FILE"
+# Build CLAUDE.md artifact from machine.md + shared instructions
+bash "$SCRIPT_DIR/propagate.sh"
 
-# Set up symlink — back up existing CLAUDE.md if it's a real file (not already a symlink)
+# Symlink ~/.claude/CLAUDE.md → generated CLAUDE.md
+# Back up existing file if it's not already a symlink
 mkdir -p "$(dirname "$CLAUDE_CONFIG")"
 
 if [ -f "$CLAUDE_CONFIG" ] && [ ! -L "$CLAUDE_CONFIG" ]; then
@@ -42,15 +47,18 @@ if [ -f "$CLAUDE_CONFIG" ] && [ ! -L "$CLAUDE_CONFIG" ]; then
   echo "Backed up existing CLAUDE.md → $BACKUP"
 fi
 
-ln -sf "$MACHINE_FILE" "$CLAUDE_CONFIG"
+ln -sf "$CLAUDE_FILE" "$CLAUDE_CONFIG"
 
 echo ""
 echo "  Machine '$MACHINE_NAME' added to the hive."
 echo ""
-echo "  File:    $MACHINE_FILE"
-echo "  Symlink: $CLAUDE_CONFIG → $MACHINE_FILE"
+echo "  Source:  $MACHINE_FILE"
+echo "  Built:   $CLAUDE_FILE"
+echo "  Symlink: $CLAUDE_CONFIG → $CLAUDE_FILE"
 echo ""
-echo "  Next:"
-echo "    1. Edit $MACHINE_FILE — fill in your hardware, OS, and tools"
-echo "    2. Run scripts/sync.sh to push to the hive"
+echo "  Next steps:"
+echo "    1. Edit $MACHINE_FILE — fill in hardware, OS, tools, and hook setup"
+echo "    2. Run scripts/propagate.sh to rebuild CLAUDE.md after editing"
+echo "    3. Set up hooks — see templates/new-machine-setup.md Step 5"
+echo "    4. Run scripts/sync.sh to push to the hive"
 echo ""
