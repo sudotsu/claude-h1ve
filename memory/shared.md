@@ -1,11 +1,17 @@
 # Shared Memory
 
-Cross-machine state. All agents read and write here.
+Cross-machine state. All agents read this on session start.
+Keep current — update at session end when anything changes.
+
+---
 
 ## Machine Status
-<!-- Update when machines are added or change -->
-- [machine-name]: [OS, key tools, status]
 
-## Key Decisions
-<!-- Decisions that affect how you work across machines -->
-- Package management: [your preference, e.g. pnpm on Linux, winget on Windows]
+| Machine | OS / Environment | Key Tools | Status |
+|---------|-----------------|-----------|--------|
+| [machine-name] | [OS, shell] | [Node, Python, Claude Code version] | [active / setup-pending] |
+
+## Environment Notes
+<!-- Cross-machine conventions worth knowing -->
+<!-- e.g. "pnpm preferred over npm on all machines" -->
+<!-- e.g. "Desktop has GPU — use for heavy compute, model runs, etc." -->
