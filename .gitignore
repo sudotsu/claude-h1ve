@@ -23,3 +23,14 @@ secrets.*
 
 # Logs
 *.log
+
+# Draft files — work-in-progress, never auto-synced
+# Write new files as <name>.md.draft until structurally complete,
+# then rename to <name>.md. Prevents half-written handoffs or decisions
+# from being committed and broadcast to other machines on crash.
+*.draft
+
+# Scratch directory — temp files, test scripts, raw API responses
+# All agents must use ~/hive/scratch/ for any throwaway work.
+# Never write temp files to the repo root or any tracked directory.
+scratch/
