@@ -132,6 +132,19 @@ Memory files live in `memory/` and are read by Claude on every session start:
 
 ---
 
+## Known limitations
+
+**Hook failure is silent.**
+If a hook doesn't fire — wrong bash binary on Windows, path issue, permissions — the session runs without syncing and you won't know. No verification step, no fallback alert. If something seems stale, run `sync.sh` manually and verify your hooks are wired correctly.
+
+**Windows native is the fragile path.**
+Three bash binaries in PATH, `$HOME` resolution differences between Node.js and bash, PowerShell wrapper requirements — native Windows works but has more ways to silently break than Linux or WSL2. If you have a choice, use WSL2. See `machines/_example-windows-wsl/`.
+
+**GitHub is a hard dependency.**
+If the repo is unavailable — auth issue, network down, GitHub outage — sessions run with no hive context and no local fallback. Rare in normal use, worth knowing if you work in unreliable or airgapped environments.
+
+---
+
 ## Install
 
 **Requires:** [Claude Code](https://claude.ai/code) · [GitHub CLI](https://cli.github.com/) · git
