@@ -6,8 +6,26 @@ set -e
 
 cd "$(dirname "$0")/.."
 
-# Stash any uncommitted changes so pull --rebase doesn't choke
+# On any unexpected failure: print recovery instructions before exiting.
+# Note: git stash pop failure is handled explicitly below and does not trigger this trap.
 STASHED=false
+trap '
+  echo ""
+  echo "========================================="
+  echo "SYNC FAILED"
+  echo "========================================="
+  if [ "${STASHED}" = true ]; then
+    echo "Your changes were stashed before the failure. Recover with:"
+    echo "  cd $(pwd)"
+    echo "  git stash list"
+    echo "  git stash pop"
+    echo ""
+  fi
+  echo "Fix the issue above, then re-run: bash scripts/sync.sh"
+  echo "========================================="
+' ERR
+
+# Stash any uncommitted changes so pull --rebase doesn't choke
 if [ -n "$(git status --porcelain)" ]; then
   echo "Stashing local changes..."
   git stash push -u -m "sync-autostash"

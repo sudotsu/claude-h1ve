@@ -18,8 +18,14 @@ if [ ! -f "$SHARED_FILE" ]; then
   exit 1
 fi
 
-# Extract shared content: everything after the first --- in CLAUDE-shared.md (skips preamble)
-SHARED_CONTENT=$(sed -n '/^---$/,$ p' "$SHARED_FILE" | tail -n +2)
+# Extract shared content (everything after <!-- BEGIN SHARED --> marker)
+MARKER="<!-- BEGIN SHARED -->"
+SHARED_LINE=$(grep -n "^${MARKER}$" "$SHARED_FILE" | cut -d: -f1)
+if [ -z "$SHARED_LINE" ]; then
+  echo "ERROR: ${MARKER} not found in $SHARED_FILE"
+  exit 1
+fi
+SHARED_CONTENT=$(tail -n +"$((SHARED_LINE + 1))" "$SHARED_FILE")
 
 BUILT=0
 SKIPPED=0

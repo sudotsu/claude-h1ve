@@ -2,9 +2,9 @@
 
 This file is the source of truth for rules shared across all machines.
 Edit here, then run `scripts/propagate.sh` to rebuild every machine's `CLAUDE.md`.
-Everything above the `---` below is a preamble for humans — the actual shared instructions start after it.
+Everything above `<!-- BEGIN SHARED -->` is a preamble for humans — the actual shared instructions start after it.
 
----
+<!-- BEGIN SHARED -->
 
 ## Hive Context
 
