@@ -1,22 +1,35 @@
 {
+  "autoMemoryDirectory": "~/h1ve/memory/claude",
   "hooks": {
-    "UserPromptSubmit": [
+    "SessionStart": [
       {
+        "matcher": "startup|resume|clear",
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c '$HOME/hive/scripts/session-start.sh'",
+            "command": "bash -c '$HOME/h1ve/scripts/session-start.sh'",
             "timeout": 15
           }
         ]
       }
     ],
-    "Stop": [
+    "SessionEnd": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c '$HOME/hive/scripts/sync.sh'",
+            "command": "bash -c '$HOME/h1ve/scripts/sync.sh'",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c '$HOME/h1ve/scripts/sync.sh'",
             "timeout": 30
           }
         ]

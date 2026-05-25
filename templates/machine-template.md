@@ -1,44 +1,37 @@
-# [Machine Name] — Claude Instructions
-
-<!--
-  This is machine.md — the editable source file for this machine.
-  Fill in your specs below, then run scripts/propagate.sh to generate CLAUDE.md.
-  CLAUDE.md is a build artifact — never edit it directly.
-  See machines/_example-linux/ or machines/_example-windows-wsl/ for filled examples.
--->
+# Machine Name — Claude Instructions
 
 ## Machine
-- **Model**:
-- **CPU**:
-- **RAM**:
-- **GPU**:
-- **Storage**:
-- **Role**: [e.g. primary dev, portable, gaming/compute]
+- **Model/Motherboard**:
+- **CPU**: (model, cores, threads, base/boost clock)
+- **GPU**: (model, VRAM)
+- **RAM**: (sticks, capacity, speed, part number)
+- **Storage**: (model, type, capacity for each drive)
+- **BIOS**: (vendor, version, date)
+- **Battery**: (if laptop — status, health)
+- **Role**: (what this machine is primarily used for)
 
 ## OS
-- **Primary**: [OS name, version]
-- **Secondary**: [WSL2 distro, or dual-boot OS — if applicable]
+- **Primary**: (OS name, version, which drive)
+- **Secondary**: (if dual-boot or WSL — name, version, config details)
 
 ## Tools Installed
-<!-- List tools with versions and how they were installed -->
 - **Node.js**:
 - **Python**:
-- **Package manager**: [e.g. pnpm / npm]
+- **Git**:
+- **gh**:
 - **Claude Code**:
-- **git / gh**:
 
 ## Important Paths
-- Hive: `~/hive/`
-- Claude config: `~/.claude/` (CLAUDE.md symlinked to this machine's CLAUDE.md)
+- H1VE repo:
+- Claude config:
+- Home directory:
 
 ## OS-Specific Notes
-<!-- Shell type, admin access quirks, path conventions, anything Claude needs
-     to run commands correctly on this machine -->
-
-## Hook Setup
-<!-- Which hook pattern does this machine use?
-     Linux / WSL2: cp ~/hive/shared/settings.json ~/.claude/settings.json
-     Native Windows (Git Bash): see machines/_example-windows-native/machine.md -->
+(Shell type, admin access quirks, interop notes, anything Claude needs to know to run commands correctly on this machine)
 
 ## System Optimizations Applied
-<!-- Fill in after running an optimization sweep. List every change made. -->
+(Filled in after optimization sweep. List every change made.)
+
+## TODO
+- [ ] Check if NVIDIA CUDA toolkit is installed (if GPU present)
+- [ ] Verify GPU passthrough works (if WSL)

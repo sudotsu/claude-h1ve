@@ -1,47 +1,95 @@
-<!-- AUTO-GENERATED FILE — DO NOT EDIT DIRECTLY. Source: machines/_example-linux/machine.md + shared/CLAUDE-system.md + shared/CLAUDE-behavior.md. Run scripts/propagate.sh to rebuild. -->
+<!-- AUTO-GENERATED FILE — DO NOT EDIT DIRECTLY. Source: machines/_example-windows-native/machine.md + shared/CLAUDE-system.md + shared/CLAUDE-behavior.md. Run scripts/propagate.sh to rebuild. -->
 
-# My Linux Machine — Claude Instructions
+# My Windows Machine (Native) — Claude Instructions
 
 ## Machine
-- **Model**: ThinkPad X1 Carbon Gen 11
-- **CPU**: Intel Core i7-1365U (10 cores / 12 threads)
-- **RAM**: 16GB
-- **GPU**: Intel Iris Xe (integrated)
-- **Storage**: 512GB NVMe SSD
+- **Model**: Dell XPS 15 9530
+- **CPU**: Intel Core i9-13900H (14 cores / 20 threads)
+- **RAM**: 32GB
+- **GPU**: NVIDIA RTX 4060 + Intel Iris Xe
+- **Storage**: 1TB NVMe SSD
 - **Role**: Primary dev machine
 
 ## OS
-- **Distro**: Ubuntu 24.04 LTS
-- **Desktop**: GNOME 46
-- **Kernel**: 6.8.0-45-generic
+- **Windows**: Windows 11 Pro 23H2
+- **WSL2**: Ubuntu 22.04 (installed but Claude Code runs natively, not inside WSL)
 
-## Tools Installed
-- **Node.js**: v22.x LTS (via NodeSource)
-- **Python**: 3.12 system-managed — use venv or pipx for installs
-- **Package manager**: pnpm preferred
-- **Claude Code**: latest (global, via npm)
-- **Gemini CLI**: latest (global, via npm)
-- **git**: 2.43 / **gh**: 2.45
+## Environment
+- **Claude Code running in**: Native Windows with Git Bash as shell
+- **Primary shell**: Git Bash (`C:/Program Files/Git/bin/bash.exe`)
 
-## System Notes
-- Firewall: UFW enabled (deny incoming, allow outgoing)
-- DNS-over-TLS: systemd-resolved with Cloudflare (1.1.1.1)
-- zram swap active (~8GB)
-- TLP power management configured
+## Tools Installed (Windows-native)
+- **Node.js**: v22.x LTS (Windows installer) / npm latest
+- **Python**: 3.12 (Windows installer)
+- **Claude Code**: latest (global, via npm — `npm install -g @anthropic-ai/claude-code`)
+- **git**: latest (git-scm.com) / **gh**: latest (cli.github.com)
 
 ## Important Paths
-- Hive: `~/hive/`
-- Claude config: `~/.claude/` (CLAUDE.md symlinked to machines/_example-linux/CLAUDE.md)
-- DNS config: `/etc/systemd/resolved.conf`
+- Windows home: `C:\Users\<username>\`
+- Git Bash equivalent: `/c/Users/<username>/`
+- Hive repo: `C:\Users\<username>\hive\` (also `/c/Users/<username>/hive/` in Git Bash)
+- Claude config: `C:\Users\<username>\.claude\` (CLAUDE.md symlinked to machines/_example-windows-native/CLAUDE.md)
+
+## Windows-Specific Notes
+- Paths use forward slashes in Git Bash (`/c/Users/<username>/`) but backslashes in native Windows
+- Some operations require elevated PowerShell (admin) — Claude will tell you exactly what to run rather than silently skipping
+- **Hooks use a PowerShell→Git Bash wrapper** (see Hook Setup below) — do NOT copy `shared/settings.json` directly, it will break silently
 
 ## Hook Setup
-Hooks use the standard Linux pattern from `shared/settings.json`:
-```bash
-cp ~/hive/shared/settings.json ~/.claude/settings.json
+Claude Code's hook runner resolves `/bin/bash` to the WSL shim (`C:\Windows\System32\bash.exe`),
+not Git Bash. The WSL shim cannot resolve Git Bash paths, so standard hooks silently fail.
+
+Fix: create `C:\Users\<username>\.claude\settings.json` manually with the PowerShell wrapper:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "powershell.exe -NoProfile -Command \"& 'C:/Program Files/Git/bin/bash.exe' 'C:/Users/<username>/hive/scripts/session-start.sh'\"",
+          "timeout": 15
+        }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "powershell.exe -NoProfile -Command \"& 'C:/Program Files/Git/bin/bash.exe' 'C:/Users/<username>/hive/scripts/sync.sh'\"",
+          "timeout": 30
+        }]
+      }
+    ]
+  }
+}
 ```
 
+Replace `<username>` with your Windows username. This bypasses the WSL shim entirely by
+routing through PowerShell to invoke Git Bash directly by full path.
+
+**Why this is necessary:** Three bash binaries exist on Windows+WSL in PATH priority order:
+`C:\Windows\System32\bash.exe` (WSL shim) → WSL app alias → `C:\Program Files\Git\bin\bash.exe` (Git Bash).
+Node.js (which runs Claude Code) finds the WSL shim first. The shim cannot resolve
+Git Bash-style paths (`/c/Users/...`) or Windows paths (`C:\Users\...`). The PowerShell
+wrapper bypasses this entirely.
+
 ---
-<!-- SHARED — synced from ~/h1ve/shared/CLAUDE-system.md + CLAUDE-behavior.md -->
+<!-- SHARED — synced from ~/h1ve/shared/GEMINI-shared.md + CLAUDE-system.md + CLAUDE-behavior.md -->
+
+
+## Gemini Handshake (MANDATORY STARTUP)
+Before executing user requests, you MUST:
+1. **Pull Latest:** Gemini CLI handles git via the `SessionStart` hook (matcher: `startup|resume|clear`). Local repo is at `~/h1ve`.
+2. **Scan Status:** Read `~/h1ve/memory/projects.md` to identify the active sprint.
+3. **Check Handoffs:** Scan `~/h1ve/handoffs/` for files addressed to 'gemini'. Read them and surface them immediately.
+4. **Engineering Alignment:** You are a Senior Architect. Follow all Engineering Mode rules defined in `shared/CLAUDE-behavior.md` and h1ve system rules in `shared/CLAUDE-system.md`. Both are embedded in this file below.
+
+## Gemini Core Focus
+- **Logic Verification:** Use your reasoning engine to stress-test mathematical models.
+- **Direct Action:** You have CLI/Tool access. Perform the work, don't just draft it.
+- **Context Injection:** When updating `memory/decisions.md`, ensure the logic is agent-neutral so Claude can execute your findings.
 
 
 ## H1VE Context

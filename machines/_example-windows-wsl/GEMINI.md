@@ -1,47 +1,61 @@
-<!-- AUTO-GENERATED FILE — DO NOT EDIT DIRECTLY. Source: machines/_example-linux/machine.md + shared/CLAUDE-system.md + shared/CLAUDE-behavior.md. Run scripts/propagate.sh to rebuild. -->
+<!-- AUTO-GENERATED FILE — DO NOT EDIT DIRECTLY. Source: machines/_example-windows-wsl/machine.md + shared/CLAUDE-system.md + shared/CLAUDE-behavior.md. Run scripts/propagate.sh to rebuild. -->
 
-# My Linux Machine — Claude Instructions
+# My Windows Machine — Claude Instructions
 
 ## Machine
-- **Model**: ThinkPad X1 Carbon Gen 11
-- **CPU**: Intel Core i7-1365U (10 cores / 12 threads)
-- **RAM**: 16GB
-- **GPU**: Intel Iris Xe (integrated)
-- **Storage**: 512GB NVMe SSD
-- **Role**: Primary dev machine
+- **Model**: Dell XPS 15 9530
+- **CPU**: Intel Core i9-13900H (14 cores / 20 threads)
+- **RAM**: 32GB
+- **GPU**: NVIDIA RTX 4060 + Intel Iris Xe
+- **Storage**: 1TB NVMe SSD
+- **Role**: Gaming + heavy compute
 
 ## OS
-- **Distro**: Ubuntu 24.04 LTS
-- **Desktop**: GNOME 46
-- **Kernel**: 6.8.0-45-generic
+- **Windows**: Windows 11 Pro 23H2
+- **WSL2**: Ubuntu 22.04
+
+## Environment
+- **Claude Code running in**: WSL2 — symlink and hooks live inside WSL
+- **Primary shell**: WSL2 (Ubuntu) for dev work, PowerShell for Windows-native tasks
 
 ## Tools Installed
-- **Node.js**: v22.x LTS (via NodeSource)
-- **Python**: 3.12 system-managed — use venv or pipx for installs
-- **Package manager**: pnpm preferred
-- **Claude Code**: latest (global, via npm)
-- **Gemini CLI**: latest (global, via npm)
-- **git**: 2.43 / **gh**: 2.45
-
-## System Notes
-- Firewall: UFW enabled (deny incoming, allow outgoing)
-- DNS-over-TLS: systemd-resolved with Cloudflare (1.1.1.1)
-- zram swap active (~8GB)
-- TLP power management configured
+- **Node.js**: v22.x LTS (via nvm inside WSL2)
+- **Python**: 3.12 (via pyenv inside WSL2)
+- **Claude Code**: latest (global, via npm inside WSL2)
+- **git**: 2.43 (WSL2) / **gh**: 2.45 (WSL2)
 
 ## Important Paths
-- Hive: `~/hive/`
-- Claude config: `~/.claude/` (CLAUDE.md symlinked to machines/_example-linux/CLAUDE.md)
-- DNS config: `/etc/systemd/resolved.conf`
+- Windows home: `C:\Users\<username>\`
+- WSL home: `/home/<username>/`
+- Hive (WSL): `~/hive/`
+- Claude config (WSL): `~/.claude/` (CLAUDE.md symlinked to machines/_example-windows-wsl/CLAUDE.md)
+
+## System Notes
+- Windows Defender exclusions set for WSL2 dev directories (speeds up builds)
+- Commands requiring Windows-level elevation (not WSL sudo) need a PowerShell admin window — flag these explicitly rather than silently skipping
 
 ## Hook Setup
-Hooks use the standard Linux pattern from `shared/settings.json`:
+Claude Code runs inside WSL2 — hooks use the standard Linux pattern:
 ```bash
 cp ~/hive/shared/settings.json ~/.claude/settings.json
 ```
+For native Windows (Git Bash, not WSL2), see `machines/_example-windows-native/`.
 
 ---
-<!-- SHARED — synced from ~/h1ve/shared/CLAUDE-system.md + CLAUDE-behavior.md -->
+<!-- SHARED — synced from ~/h1ve/shared/GEMINI-shared.md + CLAUDE-system.md + CLAUDE-behavior.md -->
+
+
+## Gemini Handshake (MANDATORY STARTUP)
+Before executing user requests, you MUST:
+1. **Pull Latest:** Gemini CLI handles git via the `SessionStart` hook (matcher: `startup|resume|clear`). Local repo is at `~/h1ve`.
+2. **Scan Status:** Read `~/h1ve/memory/projects.md` to identify the active sprint.
+3. **Check Handoffs:** Scan `~/h1ve/handoffs/` for files addressed to 'gemini'. Read them and surface them immediately.
+4. **Engineering Alignment:** You are a Senior Architect. Follow all Engineering Mode rules defined in `shared/CLAUDE-behavior.md` and h1ve system rules in `shared/CLAUDE-system.md`. Both are embedded in this file below.
+
+## Gemini Core Focus
+- **Logic Verification:** Use your reasoning engine to stress-test mathematical models.
+- **Direct Action:** You have CLI/Tool access. Perform the work, don't just draft it.
+- **Context Injection:** When updating `memory/decisions.md`, ensure the logic is agent-neutral so Claude can execute your findings.
 
 
 ## H1VE Context

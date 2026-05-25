@@ -1,45 +1,28 @@
-# Handoff: [Brief Title]
+# Handoff: <brief title>
 
-**From:** [agent-name]
-**To:** [agent-name]
+**From:** claude | gemini | chatgpt
+**To:** claude | gemini | chatgpt
 **Date:** YYYY-MM-DD
-**Status:** open | in-progress | resolved
-
----
+**Status:** open
 
 ## Problem
-
-<!-- What specifically needs to be solved or reviewed? One clear paragraph. -->
+(What needs to be solved. Be specific. One paragraph max — if it needs more, you haven't scoped it clearly enough.)
 
 ## Context
-
-<!-- Everything the receiving agent needs to understand the situation:
-     - Relevant files and their locations
-     - What the system is supposed to do
-     - Any constraints (OS, tool versions, architecture decisions already made)
-     - Links to relevant decisions in memory/decisions.md if applicable -->
+(What the receiving agent needs to know to work on this without asking follow-up questions: stack, constraints, relevant files, prior decisions, environment details.)
 
 ## Attempted Solutions
-
-<!-- What was already tried and why it didn't work.
-     Be specific — include commands run, errors received, and reasoning.
-     If nothing was attempted: "None — delegating before attempting." -->
+(What was tried, what failed, and exactly why it failed. The receiving agent must not repeat dead ends. If nothing was tried, say so explicitly.)
 
 ## Required Output
-
-<!-- Be unambiguous. Specify:
-     - Exact deliverable (code change, explanation, decision, review)
-     - Format expected (inline edit, new file, verbal answer)
-     - Where to put it (file path, section in this document, etc.)
-     If the receiving agent has to guess, rewrite this section. -->
+(Exactly what you need back. Specify: format, scope, success criteria, and any hard constraints. Ambiguity here causes bad responses.)
 
 ---
 
 ## Response
 
-<!-- Receiving agent fills this in. Leave blank until resolved. -->
+**Resolved by:**
+**Date:**
+**Status:** open | in-progress | resolved
 
-**Agent:** [responding agent]
-**Date:** YYYY-MM-DD
-
-<!-- Response here -->
+(Response content here. Be as specific as the Required Output asked for.)

@@ -1,108 +1,77 @@
-# New Machine Setup
+# New Machine Setup Checklist
 
-Use this when adding a new machine to the hive.
+Use this when adding a new machine to h1ve.
 
 ## 1. Prerequisites
 - Node.js installed
-- `git` installed
-- `gh` CLI installed and authenticated (`gh auth login`)
+- `gh` CLI installed
+- `gh auth login` completed (use browser flow, not token paste)
 
 ## 2. Install Claude Code
 ```bash
 npm install -g @anthropic-ai/claude-code
 ```
 
-## 3. Clone the hive
+## 3. Clone h1ve
 ```bash
-gh repo clone YOUR-USERNAME/claude-h1ve ~/hive
+gh repo clone sudotsu/h1ve ~/h1ve
 ```
 
-## 4. Create the machine profile
+## 4. Create the machine's machine.md
 ```bash
-bash ~/hive/scripts/new-machine.sh <machine-name>
+mkdir -p ~/h1ve/machines/<machine-name>
+cp ~/h1ve/templates/machine-template.md ~/h1ve/machines/<machine-name>/machine.md
 ```
-This creates `machines/<machine-name>/machine.md` from the template, builds
-`CLAUDE.md` via `propagate.sh`, and symlinks `~/.claude/CLAUDE.md` to it.
 
-Fill in every field in `machine.md`. Use these commands to gather specs:
+Fill in every field in the template. Use these commands to gather specs:
 
-**Linux / WSL:**
+**Linux/WSL:**
 ```bash
 lscpu                                    # CPU
 free -h                                  # RAM
-lspci | grep -i vga                      # GPU (not available inside WSL)
+lspci | grep -i vga                      # GPU (not available in WSL)
 lsblk -d -o NAME,SIZE,MODEL,TYPE        # Storage
 uname -r                                 # Kernel
 cat /etc/os-release                      # OS
 ```
 
-**Windows (run from PowerShell or WSL):**
+**Windows (via PowerShell from WSL):**
 ```bash
 powershell.exe -Command "Get-CimInstance Win32_Processor | Select Name"
 powershell.exe -Command "Get-CimInstance Win32_VideoController | Select Name, AdapterRAM"
 powershell.exe -Command "Get-CimInstance Win32_PhysicalMemory | Select Capacity, Speed, Manufacturer, PartNumber"
 powershell.exe -Command "Get-PhysicalDisk | Select FriendlyName, MediaType, Size"
+powershell.exe -Command "Get-CimInstance Win32_BaseBoard | Select Product, Manufacturer"
 powershell.exe -Command "Get-CimInstance Win32_BIOS | Select SMBIOSBIOSVersion, ReleaseDate"
 ```
 
-Also fill in: installed tools (`node -v`, `python3 --version`, `git --version`,
-`gh --version`, `claude --version`), important paths, and OS-specific notes.
+Also fill in: installed tools (`node -v`, `python3 --version`, `git --version`, `gh --version`, `claude --version`), important paths, and OS-specific notes.
 
-After editing `machine.md`, rebuild:
+## 5. Build CLAUDE.md
 ```bash
-bash ~/hive/scripts/propagate.sh
+bash ~/h1ve/scripts/propagate.sh
 ```
+This generates `machines/<machine-name>/CLAUDE.md` by concatenating `machine.md` + `shared/CLAUDE-system.md` + `shared/CLAUDE-behavior.md`. CLAUDE.md is a build artifact — never edit it directly.
 
-## 5. Set up hooks
+## 6. Run the setup script
 
-Hooks wire Claude Code's session lifecycle to the hive — pulling on session
-start and syncing on session end.
-
-**Linux / WSL2 (Claude Code running inside Linux or WSL2):**
+**Linux/WSL/Termux:**
 ```bash
-cp ~/hive/shared/settings.json ~/.claude/settings.json
+bash ~/h1ve/scripts/setup-machine.sh <machine-name>
 ```
 
-**Native Windows — Git Bash (Claude Code running in Windows, not WSL2):**
-
-Do NOT copy `shared/settings.json` — it uses `$HOME` which breaks silently
-on native Windows. Create `C:\Users\<USERNAME>\.claude\settings.json` manually:
-
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [{
-          "type": "command",
-          "command": "powershell.exe -NoProfile -Command \"& 'C:/Program Files/Git/bin/bash.exe' 'C:/Users/<USERNAME>/hive/scripts/session-start.sh'\"",
-          "timeout": 15
-        }]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [{
-          "type": "command",
-          "command": "powershell.exe -NoProfile -Command \"& 'C:/Program Files/Git/bin/bash.exe' 'C:/Users/<USERNAME>/hive/scripts/sync.sh'\"",
-          "timeout": 30
-        }]
-      }
-    ]
-  }
-}
+**Windows (PowerShell):**
+```powershell
+~\h1ve\scripts\setup-machine.ps1 <machine-name>
 ```
-Replace `<USERNAME>` with your Windows username. See `machines/_example-windows-native/`
-for full explanation of why this wrapper is necessary.
 
-## 6. Run an optimization sweep (optional but recommended)
+The script creates the `~/.claude/CLAUDE.md` symlink, merges h1ve hooks into `~/.claude/settings.json` (preserving any existing settings), and verifies everything is wired correctly. It prints pass/fail for each step.
 
+## 8. Run optimization sweep
 Open Claude Code and ask:
-> "Run a system optimization sweep on this machine. Check what optimizations
-> have been applied on other machines in machines/ and apply anything relevant
-> here. Update machine.md with everything applied, then run propagate.sh."
+> "Run a system optimization sweep on this machine. Refer to machines/envy-frankenstein/CLAUDE.md or machines/desktop-gaming/CLAUDE.md for examples of what optimizations have been applied on other machines. Check which of those apply here, surface anything else worth fixing, and update this machine's CLAUDE.md with everything applied."
 
-## 7. Initial sync
+## 9. Initial sync
 ```bash
-bash ~/hive/scripts/sync.sh
+bash ~/h1ve/scripts/sync.sh
 ```

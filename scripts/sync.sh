@@ -1,15 +1,19 @@
 #!/bin/bash
-# Syncs the hive: stash local changes, pull latest, restore, propagate, commit, push
-# Run at the end of every session (or wire to Claude Code's Stop hook)
-
+# Quick sync helper — stash local changes, pull latest, restore, commit, push
 set -e
 
 cd "$(dirname "$0")/.."
+SCRATCH="$(pwd)/scratch"
+STATUS_FILE="$SCRATCH/last-sync-status"
+mkdir -p "$SCRATCH"
 
-# On any unexpected failure: print recovery instructions before exiting.
+# On any unexpected failure: write status file and print recovery instructions.
 # Note: git stash pop failure is handled explicitly below and does not trigger this trap.
 STASHED=false
 trap '
+  TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
+  echo "FAILED $TIMESTAMP" > "$STATUS_FILE"
+  echo "Command failed — see sync output above." >> "$STATUS_FILE"
   echo ""
   echo "========================================="
   echo "SYNC FAILED"
@@ -33,14 +37,20 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 
 echo "Pulling latest..."
-git pull --rebase
+if ! git pull --rebase 2>/dev/null; then
+  echo "Pull failed (offline or remote unavailable) — skipping sync"
+  exit 0
+fi
 
 if [ "$STASHED" = true ]; then
   echo "Restoring local changes..."
   if ! git stash pop; then
+    TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
+    echo "FAILED $TIMESTAMP" > "$STATUS_FILE"
+    echo "Merge conflict during stash pop — resolve manually." >> "$STATUS_FILE"
     echo ""
     echo "========================================="
-    echo "CRITICAL: MERGE CONFLICT IN HIVE FILES"
+    echo "CRITICAL: MERGE CONFLICT IN H1VE FILES"
     echo "========================================="
     echo "git stash pop failed — conflict markers are in your working tree."
     echo "Resolve manually before continuing:"
@@ -53,16 +63,26 @@ if [ "$STASHED" = true ]; then
   fi
 fi
 
-# Rebuild all machine CLAUDE.md files from source
+# Propagate shared instructions to all machine CLAUDE.md files
 echo "Propagating shared instructions..."
 bash "$(dirname "$0")/propagate.sh"
 
 if [ -n "$(git status --porcelain)" ]; then
   echo "Changes detected, syncing..."
   git add -A
-  git commit -m "sync: $(hostname -s) $(date +%Y-%m-%d-%H%M)"
-  git push
-  echo "Synced."
+  git commit -m "sync: $(hostname) $(date +%Y-%m-%d-%H%M)"
+  if git push; then
+    TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
+    echo "OK $TIMESTAMP" > "$STATUS_FILE"
+    echo "Synced."
+  else
+    TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
+    echo "FAILED $TIMESTAMP" > "$STATUS_FILE"
+    echo "Push failed — committed locally, will retry on next sync." >> "$STATUS_FILE"
+    echo "Push failed (offline or remote unavailable) — changes committed locally, will push next sync"
+  fi
 else
+  TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
+  echo "OK $TIMESTAMP" > "$STATUS_FILE"
   echo "Already up to date."
 fi

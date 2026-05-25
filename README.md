@@ -46,7 +46,7 @@ Every. Single. Time.
 ```
 
 ```
-# shared/CLAUDE-shared.md (built into every machine's CLAUDE.md)
+# shared/CLAUDE-system.md + shared/CLAUDE-behavior.md (built into every machine's CLAUDE.md)
 
 ## User Preferences
 - Direct and efficient — no lengthy explanations unless asked
@@ -80,7 +80,7 @@ claude-h1ve replaces that file with a symlink into this repo:
 ```
 machines/<name>/machine.md  ──┐
                                ├──▶ propagate.sh ──▶ machines/<name>/CLAUDE.md
-shared/CLAUDE-shared.md    ──┘                              │
+shared/CLAUDE-system.md + shared/CLAUDE-behavior.md    ──┘                              │
                                                          symlink
                                                             │
                                                    ~/.claude/CLAUDE.md
@@ -155,14 +155,14 @@ Name it `claude-h1ve`, set visibility to your preference.
 **Step 2:** Run the installer (replace `YOUR-USERNAME`):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR-USERNAME/claude-h1ve/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/YOUR-USERNAME/claude-h1ve/main/scripts/setup-machine.sh | bash
 ```
 
 Or manually:
 
 ```bash
 gh repo clone YOUR-USERNAME/claude-h1ve ~/hive
-~/hive/scripts/new-machine.sh your-machine-name
+~/hive/scripts/setup-machine.sh your-machine-name
 ```
 
 **Step 3:** Fill in your machine file:
@@ -188,7 +188,7 @@ On each new machine:
 
 ```bash
 gh repo clone YOUR-USERNAME/claude-h1ve ~/hive
-~/hive/scripts/new-machine.sh machine-name
+~/hive/scripts/setup-machine.sh machine-name
 ```
 
 ---
@@ -209,14 +209,14 @@ and recovery instructions.
 ```bash
 ~/hive/scripts/propagate.sh
 ```
-Rebuilds `CLAUDE.md` for every machine from `machine.md` + `shared/CLAUDE-shared.md`.
+Rebuilds `CLAUDE.md` for every machine from `machine.md` + `shared/CLAUDE-system.md + shared/CLAUDE-behavior.md`.
 
 ---
 
 ## Repo structure
 
 ```
-install.sh                    One-command installer (run after forking)
+scripts/setup-machine.sh                    One-command installer (run after forking)
 machines/                     Per-machine profiles
   _example-linux/             Reference: Linux setup
   _example-windows-wsl/       Reference: Windows + Claude Code in WSL2

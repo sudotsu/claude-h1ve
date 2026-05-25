@@ -1,36 +1,30 @@
 # OS
 .DS_Store
 Thumbs.db
-desktop.ini
 
 # Secrets — never commit these
 *.env
 *.key
 *.pem
-*.p12
-*.pfx
 credentials.*
-secrets.*
-*secret*
-*password*
 
-# Editors
+# Editor
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
-
-# Logs
-*.log
 
 # Draft files — work-in-progress, never auto-synced
-# Write new files as <name>.md.draft until structurally complete,
+# Agents must write new files as <name>.md.draft until structurally complete,
 # then rename to <name>.md. Prevents half-written handoffs or decisions
-# from being committed and broadcast to other machines on crash.
+# from being committed and pushed by sync.sh on session end.
 *.draft
 
-# Scratch directory — temp files, test scripts, raw API responses
-# All agents must use ~/hive/scratch/ for any throwaway work.
+# Scratch directory — temporary files, intermediate processing, test scripts
+# All agents must use ~/h1ve/scratch/ for any throwaway work.
 # Never write temp files to the repo root or any tracked directory.
 scratch/
+
+# Session history plugin (remember) — device-specific logs, not synced
+# See machines/s25-termux/machine.md for documentation of this plugin.
+.remember/
