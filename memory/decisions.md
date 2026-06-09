@@ -1,5 +1,16 @@
 # Architectural Decisions
 
+## 2026-06-09: Known limitation — conversational decisions that go unrecognized are permanently lost
+**Situation:** During a session on desktop-gaming (WSL), the `Stop` hook was found still present in `~/.claude/settings.json` alongside `SessionEnd` and `PreCompact`. The documented decision (2026-02-19, updated 2026-05-19) clearly states `Stop` was replaced by `SessionEnd` + `PreCompact` once its per-turn semantics were confirmed. However, there was a prior conversation specifically about whether to intentionally keep `Stop` for a different purpose (per-turn sync if docs changed) — and the outcome of that conversation was never logged. That outcome is now permanently unrecoverable.
+
+**Root cause:** h1ve's session-end protocol enforces that decisions get written — the CLAUDE.md instructions are explicit and auto-enforced via hook. The gap is not enforcement of *writing* but enforcement of *recognition*. A conversational decision only gets logged if the LLM identifies it as a decision worth capturing during the session. Exploratory discussions, partially-resolved debates, or topics that trail off without a clear conclusion don't trigger that recognition reliably. The Stop discussion likely ended without a firm commitment either way, so it was never framed as "log this."
+
+**What was lost:** Whether `Stop` should be retained alongside `SessionEnd` as an intentional per-turn sync trigger (the hypothesis was: fire sync immediately after any turn where docs were modified, rather than waiting until session end). The decision made in this session (2026-06-09) was to remove `Stop` based on the documented intent in decisions.md — but if the prior conversation had concluded to keep it, that conclusion is gone.
+
+**Limitation:** h1ve cannot capture decisions that exist only in conversation history. It captures what gets written. Auto-memory (`memory/claude/`) handles preferences and patterns automatically, but `decisions.md` requires deliberate recognition that something architectural was decided.
+
+**No fix identified yet.** Possible directions: a session-end prompt that explicitly asks "what architectural decisions were made this session?" before sync runs; a mid-session habit of writing draft decisions.md entries in scratch/ as discussions happen. Neither has been evaluated.
+
 ## 2026-05-24: Split shared/CLAUDE-shared.md into system and behavior files
 **Decision:** `shared/CLAUDE-shared.md` deleted and replaced by two files: `shared/CLAUDE-system.md` (h1ve infrastructure — session protocol, build rules, operational rules, machine context, tech stack) and `shared/CLAUDE-behavior.md` (behavior, collaboration, and engineering standards). `propagate.sh` updated to concatenate all three sources. `/storage/emulated/0/.claude/CLAUDE.md` (project-level override) deleted — behavior rules now propagate through the same channel as everything else.
 
