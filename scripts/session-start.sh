@@ -7,8 +7,23 @@ SETTINGS="$HOME/.claude/settings.json"
 SCRATCH="$REPO_ROOT/scratch"
 STATUS_FILE="$SCRATCH/last-sync-status"
 
-# 1. Pull latest
-cd "$REPO_ROOT" && git pull --quiet 2>/dev/null || true
+# 1. Pull latest — capture pre-pull HEAD so we can diff everything that changed
+cd "$REPO_ROOT"
+PRE_PULL=$(git rev-parse HEAD 2>/dev/null || echo "")
+git pull --quiet 2>/dev/null || true
+POST_PULL=$(git rev-parse HEAD 2>/dev/null || echo "")
+
+# Surface what changed since this machine was last active (full repo, no path filter)
+if [ -n "$PRE_PULL" ] && [ "$PRE_PULL" != "$POST_PULL" ]; then
+  echo ""
+  echo "=== H1VE: CHANGES SINCE LAST SESSION ==="
+  echo "--- Commits ---"
+  git log --oneline "$PRE_PULL..$POST_PULL"
+  echo "--- Diff ---"
+  git diff "$PRE_PULL..$POST_PULL"
+  echo "========================================="
+  echo ""
+fi
 
 # 2. Surface previous sync failure if any
 if [ -f "$STATUS_FILE" ]; then
