@@ -62,8 +62,8 @@ mkdir -p "$CLAUDE_DIR"
 ln -sf "$CLAUDE_MD" "$CLAUDE_DIR/CLAUDE.md"
 echo "  Linked"
 
-# 3. Merge h1ve hooks into ~/.claude/settings.json
-echo "[3/4] Merging h1ve hooks into ~/.claude/settings.json..."
+# 3. Enforce desired h1ve hook state in ~/.claude/settings.json
+echo "[3/4] Enforcing h1ve hook state in ~/.claude/settings.json..."
 python3 - "$CLAUDE_DIR/settings.json" << 'PYEOF'
 import json, sys, os
 
@@ -76,42 +76,76 @@ if os.path.exists(settings_path):
 
 hooks = settings.setdefault('hooks', {})
 
-session_start_cmd = "bash -c '$HOME/h1ve/scripts/session-start.sh'"
-sync_cmd          = "bash -c '$HOME/h1ve/scripts/sync.sh'"
+H1VE = 'h1ve/scripts/'
 
-def hook_present(event, needle):
-    return any(
-        any(needle in h.get('command', '') for h in entry.get('hooks', []))
+# Complete desired h1ve hook spec — single source of truth
+DESIRED = {
+    'SessionStart': {
+        'needle': 'session-start.sh',
+        'entry': {"matcher": "startup|resume|clear", "hooks": [
+            {"type": "command", "command": "bash -c '$HOME/h1ve/scripts/session-start.sh'", "timeout": 15}
+        ]}
+    },
+    'SessionEnd': {
+        'needle': 'sync.sh',
+        'entry': {"hooks": [{"type": "command", "command": "bash -c '$HOME/h1ve/scripts/sync.sh'", "timeout": 30}]}
+    },
+    'PreCompact': {
+        'needle': 'sync.sh',
+        'entry': {"hooks": [{"type": "command", "command": "bash -c '$HOME/h1ve/scripts/sync.sh'", "timeout": 30}]}
+    },
+    'PostToolUse': {
+        'needle': 'semgrep-scan.sh',
+        'entry': {"matcher": "Edit|Write", "hooks": [
+            {"type": "command", "command": "bash -c '$HOME/h1ve/scripts/semgrep-scan.sh'", "timeout": 30}
+        ]}
+    },
+}
+
+removed = []
+added = []
+
+# Remove stale h1ve hooks from every event (owns its namespace, leaves non-h1ve entries alone)
+for event in list(hooks.keys()):
+    desired_needle = DESIRED.get(event, {}).get('needle', '')
+    cleaned = []
+    for entry in hooks[event]:
+        cmds = [h.get('command', '') for h in entry.get('hooks', [])]
+        is_h1ve = any(H1VE in cmd for cmd in cmds)
+        is_correct = desired_needle and any(desired_needle in cmd for cmd in cmds)
+        if is_h1ve and not is_correct:
+            labels = [cmd.split('/')[-1] for cmd in cmds if H1VE in cmd]
+            removed.append(f"{event}({','.join(labels)})")
+        else:
+            cleaned.append(entry)
+    if cleaned:
+        hooks[event] = cleaned
+    else:
+        del hooks[event]
+
+# Add any missing desired hooks
+for event, spec in DESIRED.items():
+    present = any(
+        any(spec['needle'] in h.get('command', '') for h in entry.get('hooks', []))
         for entry in hooks.get(event, [])
     )
-
-changes = []
-
-if not hook_present('SessionStart', 'session-start.sh'):
-    hooks['SessionStart'] = [{"matcher": "startup|resume|clear", "hooks": [
-        {"type": "command", "command": session_start_cmd, "timeout": 15}
-    ]}]
-    changes.append('SessionStart')
-
-if not hook_present('SessionEnd', 'sync.sh'):
-    hooks['SessionEnd'] = [{"hooks": [{"type": "command", "command": sync_cmd, "timeout": 30}]}]
-    changes.append('SessionEnd')
-
-if not hook_present('PreCompact', 'sync.sh'):
-    hooks['PreCompact'] = [{"hooks": [{"type": "command", "command": sync_cmd, "timeout": 30}]}]
-    changes.append('PreCompact')
+    if not present:
+        hooks.setdefault(event, []).append(spec['entry'])
+        added.append(event)
 
 if 'autoMemoryDirectory' not in settings:
     settings['autoMemoryDirectory'] = '~/h1ve/memory/claude'
-    changes.append('autoMemoryDirectory')
+    added.append('autoMemoryDirectory')
 
 with open(settings_path, 'w') as f:
     json.dump(settings, f, indent=2)
 
-if changes:
-    print(f"  Added: {', '.join(changes)}")
-else:
-    print("  All hooks already present — no changes made")
+if removed:
+    print(f"  Removed stale: {', '.join(removed)}")
+if added:
+    print(f"  Added: {', '.join(added)}")
+if not removed and not added:
+    print("  Already at desired state — no changes made")
 PYEOF
 
 # 4. Verify
@@ -141,6 +175,7 @@ checks = [
     ('SessionStart', 'session-start.sh'),
     ('SessionEnd',   'sync.sh'),
     ('PreCompact',   'sync.sh'),
+    ('PostToolUse',  'semgrep-scan.sh'),
 ]
 
 for event, needle in checks:
@@ -161,6 +196,10 @@ echo ""
 if [ $ERRORS -eq 0 ]; then
   echo "Setup complete. $MACHINE_NAME is ready."
   echo "Start a Claude Code session to verify hooks fire."
+  # Record machine identity and script version for session-start self-check
+  mkdir -p "$REPO_ROOT/scratch"
+  echo "$MACHINE_NAME" > "$REPO_ROOT/scratch/setup-machine-name"
+  git -C "$REPO_ROOT" log -1 --format="%H" -- scripts/setup-machine.sh > "$REPO_ROOT/scratch/setup-machine-commit"
 else
   echo "Setup finished with $ERRORS error(s). Review output above."
   exit 1
