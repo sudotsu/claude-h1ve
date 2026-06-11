@@ -35,9 +35,9 @@ extract_shared() {
   tail -n +"$((line + 1))" "$file"
 }
 
-SYSTEM_CONTENT=$(extract_shared "$CLAUDE_SYSTEM")
-BEHAVIOR_CONTENT=$(extract_shared "$CLAUDE_BEHAVIOR")
-GEMINI_CONTENT=$(extract_shared "$GEMINI_SHARED")
+SYSTEM_CONTENT=$(extract_shared "$CLAUDE_SYSTEM")   || exit 1
+BEHAVIOR_CONTENT=$(extract_shared "$CLAUDE_BEHAVIOR") || exit 1
+GEMINI_CONTENT=$(extract_shared "$GEMINI_SHARED")     || exit 1
 
 BUILT=0
 SKIPPED=0

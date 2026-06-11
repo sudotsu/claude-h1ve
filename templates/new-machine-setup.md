@@ -47,6 +47,10 @@ powershell.exe -Command "Get-CimInstance Win32_BIOS | Select SMBIOSBIOSVersion, 
 
 Also fill in: installed tools (`node -v`, `python3 --version`, `git --version`, `gh --version`, `claude --version`), important paths, and OS-specific notes.
 
+> **Reference:** `machines/desktop-gaming/machine.md` is a fully populated example. Use it as a guide for level of detail expected in each field.
+
+> **Shortcut:** Pass `--auto-detect` to the setup script (step 6) to pre-populate hardware fields automatically, then review and fill in the gaps.
+
 ## 5. Build CLAUDE.md
 ```bash
 bash ~/h1ve/scripts/propagate.sh
@@ -66,6 +70,14 @@ bash ~/h1ve/scripts/setup-machine.sh <machine-name>
 ```
 
 The script creates the `~/.claude/CLAUDE.md` symlink, merges h1ve hooks into `~/.claude/settings.json` (preserving any existing settings), and verifies everything is wired correctly. It prints pass/fail for each step.
+
+> ⚠️ **Windows only:** Do NOT manually copy `shared/settings.json` to `~/.claude/settings.json` on Windows. It uses `$HOME` which resolves incorrectly through the WSL shim. Use `setup-machine.ps1` only — it generates the correct PowerShell-wrapped hook commands automatically.
+
+## 7. Verify setup
+```bash
+bash ~/h1ve/scripts/h1ve-status.sh
+```
+All checks should pass before continuing. If any fail, re-run `setup-machine.sh` or check the error message.
 
 ## 8. Run optimization sweep
 Open Claude Code and ask:

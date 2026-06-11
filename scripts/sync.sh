@@ -65,7 +65,10 @@ fi
 
 # Propagate shared instructions to all machine CLAUDE.md files
 echo "Propagating shared instructions..."
-bash "$(dirname "$0")/propagate.sh"
+if ! bash "$(dirname "$0")/propagate.sh"; then
+  echo "ERROR: propagate.sh failed — aborting sync to prevent committing broken CLAUDE.md files"
+  exit 1
+fi
 
 if [ -n "$(git status --porcelain)" ]; then
   echo "Changes detected, syncing..."
