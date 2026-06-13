@@ -184,10 +184,11 @@ echo "  Linked"
 
 # 3. Enforce desired h1ve hook state in ~/.claude/settings.json
 echo "[3/4] Enforcing h1ve hook state in ~/.claude/settings.json..."
-python3 - "$CLAUDE_DIR/settings.json" << 'PYEOF'
+python3 - "$CLAUDE_DIR/settings.json" "$REPO_ROOT" << 'PYEOF'
 import json, sys, os
 
 settings_path = sys.argv[1]
+repo_root = sys.argv[2]
 
 settings = {}
 if os.path.exists(settings_path):
@@ -203,21 +204,21 @@ DESIRED = {
     'SessionStart': {
         'needle': 'session-start.sh',
         'entry': {"matcher": "startup|resume|clear", "hooks": [
-            {"type": "command", "command": "bash -c '$HOME/h1ve/scripts/session-start.sh'", "timeout": 15}
+            {"type": "command", "command": f"bash -c '{repo_root}/scripts/session-start.sh'", "timeout": 15}
         ]}
     },
     'SessionEnd': {
         'needle': 'sync.sh',
-        'entry': {"hooks": [{"type": "command", "command": "bash -c '$HOME/h1ve/scripts/sync.sh'", "timeout": 30}]}
+        'entry': {"hooks": [{"type": "command", "command": f"bash -c '{repo_root}/scripts/sync.sh'", "timeout": 30}]}
     },
     'PreCompact': {
         'needle': 'sync.sh',
-        'entry': {"hooks": [{"type": "command", "command": "bash -c '$HOME/h1ve/scripts/sync.sh'", "timeout": 30}]}
+        'entry': {"hooks": [{"type": "command", "command": f"bash -c '{repo_root}/scripts/sync.sh'", "timeout": 30}]}
     },
     'PostToolUse': {
         'needle': 'semgrep-scan.sh',
         'entry': {"matcher": "Edit|Write", "hooks": [
-            {"type": "command", "command": "bash -c '$HOME/h1ve/scripts/semgrep-scan.sh'", "timeout": 30}
+            {"type": "command", "command": f"bash -c '{repo_root}/scripts/semgrep-scan.sh'", "timeout": 30}
         ]}
     },
 }

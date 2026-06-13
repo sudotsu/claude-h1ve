@@ -67,16 +67,17 @@ fi
 # 4. Verify SessionEnd and PreCompact hooks — auto-repair if drifted
 # Skipped on Windows Git Bash (MSYSTEM is set there; Windows needs setup-machine.ps1)
 if [ -f "$SETTINGS" ] && [ -z "${MSYSTEM:-}" ]; then
-  python3 - "$SETTINGS" << 'PYEOF'
+  python3 - "$SETTINGS" "$REPO_ROOT" << 'PYEOF'
 import json, sys, os
 
 settings_path = sys.argv[1]
+repo_root = sys.argv[2]
 
 with open(settings_path) as f:
     settings = json.load(f)
 
 hooks = settings.setdefault('hooks', {})
-sync_cmd = "bash -c '$HOME/h1ve/scripts/sync.sh'"
+sync_cmd = f"bash -c '{repo_root}/scripts/sync.sh'"
 missing = []
 
 for event in ('SessionEnd', 'PreCompact'):
