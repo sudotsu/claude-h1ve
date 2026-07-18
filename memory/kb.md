@@ -136,4 +136,14 @@ Structured reference of discovered facts, gotchas, and system behaviors that are
 * **Execution/Fix:** Install the larger stick. Not swapping to disk beats dual-channel bandwidth in every practical scenario.
 * **Recurrence risk:** Hardware decision with permanent consequences — if you don't know about flex mode you might reject the upgrade unnecessarily or expect worse performance than you'll actually see.
 
+---
+
+## opend-ai (uncensored CLI agent)
+
+### Uncapped tool output → context overflow (grep capped matches, not line width)
+* **Symptom/Context:** `opend` streamed `The input (~580k tokens) is longer than the model's context length (202752)`, retried 3× ("attempt 3/3"), then died. Same blob got saved into a session file (1.7 MB for 6 messages), so `/load` also broke.
+* **Root Cause/Mechanic:** A single `grep_search` over a broad workspace (`~`) returned **1.6M chars in one tool result**. `grepSearch` capped the *number* of matches (100) but not each line's *width* — minified/one-line files (bundles, `.map`, lock files) make one matched "line" megabytes long. That whole result lands in the CURRENT round, which `splitForPrune` can never evict, so no amount of history pruning helps. Two secondary bugs let it escape cleanly: `isContextOverflow` gated on `err.status === 400`, but streamed (SSE) overflow errors carry no status → recovery never fired; `isRetryable` treated the status-less error as transient → wasted the 3 retries.
+* **Execution/Fix:** (1) `grepSearch` trims each line to 500 chars; (2) universal cap at the tool-dispatch choke point in `agent.ts` (`capToolResult`) truncates EVERY tool result to `toolOutputCap(contextTokens)` ≈ contextTokens chars (~¼ of window); (3) `isContextOverflow` now matches on message text regardless of status; (4) `isRetryable` returns false for overflows. Live repo is `/home/sudotsu/opend-ai` (global `opend` symlinks into its `dist/` — rebuild `dist` = fix is live, no reinstall). 181 tests pass.
+* **Recurrence risk:** "Limit the rows but not the row width" is invisible until a minified file is in scope. The prune/summarize system looks bulletproof, so the instinct is to trust it — but it structurally cannot shrink a single oversized round; the only real fix is bounding tool output at the source.
+* **Follow-up (same session, shipped):** made `grep_search` quality-good from a broad workspace: added the `ignore` npm lib (7.0.6) for correct nested `.gitignore` matching incl. ancestor repo `.gitignore` above the search root; `ALWAYS_SKIP_DIRS` set (node_modules/.git/dist/build/.next/.venv/target/… ~30 dirs); NUL-byte binary content-sniff (not extension guessing); explicit-target search still overrides ignore rules. 185 tests. Verified end-to-end outside a repo (600KB one-line file → 602-char output).
 
