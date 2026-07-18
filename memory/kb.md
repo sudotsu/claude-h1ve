@@ -110,11 +110,11 @@ Structured reference of discovered facts, gotchas, and system behaviors that are
 * **Execution/Fix:** Intentional — resumed sessions get a fresh pull. No action needed.
 * **Recurrence risk:** Counterintuitive — "resume" implies continuing existing state, not triggering initialization. The pull on resume can surface merge conflicts or sync issues mid-task if the previous session left uncommitted state.
 
-### `/memory` command only opens files for editing — it does not "run"
-* **Symptom/Context:** User runs `/memory` expecting it to execute/update something; it just prompts to edit a file and appears to do nothing. Recurring frustration.
-* **Root Cause/Mechanic:** `/memory` is a built-in Claude Code command whose sole function is to open memory/CLAUDE.md files in an editor for manual editing. It is not a task-runner and has no h1ve integration.
-* **Execution/Fix:** For h1ve memory, ignore `/memory`. Just tell Claude "update h1ve" — the assistant edits `~/h1ve/memory/` files (kb.md, decisions.md, claude/*.md) directly with its tools, and the SessionEnd/PreCompact hooks sync them.
-* **Recurrence risk:** The name implies it manages memory; it only edits raw files. Surface this proactively whenever the user reaches for `/memory`.
+### `/memory` command — what it actually does (corrected)
+* **Symptom/Context:** User runs `/memory`, sees it prompt to edit a file, and it feels like it "does nothing." Frustration is that its full function isn't obvious.
+* **Root Cause/Mechanic:** Per current Claude Code docs (`code.claude.com/docs/en/commands`), built-in `/memory` does THREE things: (1) edit `CLAUDE.md` memory files, (2) enable/disable auto-memory, (3) **view auto-memory entries**. The "edit a file" prompt is only branch (1). On this machine `autoMemoryDirectory` → `~/h1ve/memory/claude/` (see [[feedback_automemory_location]]), so `/memory` IS the UI into the h1ve auto-memory store — viewing/toggling the very files that drive h1ve persistence. It is NOT a no-op and IS h1ve-integrated.
+* **Execution/Fix:** `/memory` is legit for viewing auto-memory entries and toggling capture. For *adding* a specific fact fast, still just tell Claude "update h1ve" — the assistant edits `~/h1ve/memory/` directly and the SessionEnd/PreCompact hooks sync. Both paths are valid.
+* **Recurrence risk / self-note:** Do NOT claim `/memory` "does nothing" from training memory — that was asserted wrongly on 2026-07-18 and corrected only after checking docs. The `remember` and `episodic-memory` plugins are hook-driven and define NO slash commands — they are not the source of `/memory`. Verify command behavior against live docs before asserting.
 
 ---
 
