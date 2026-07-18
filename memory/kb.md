@@ -110,6 +110,12 @@ Structured reference of discovered facts, gotchas, and system behaviors that are
 * **Execution/Fix:** Intentional — resumed sessions get a fresh pull. No action needed.
 * **Recurrence risk:** Counterintuitive — "resume" implies continuing existing state, not triggering initialization. The pull on resume can surface merge conflicts or sync issues mid-task if the previous session left uncommitted state.
 
+### `/memory` command only opens files for editing — it does not "run"
+* **Symptom/Context:** User runs `/memory` expecting it to execute/update something; it just prompts to edit a file and appears to do nothing. Recurring frustration.
+* **Root Cause/Mechanic:** `/memory` is a built-in Claude Code command whose sole function is to open memory/CLAUDE.md files in an editor for manual editing. It is not a task-runner and has no h1ve integration.
+* **Execution/Fix:** For h1ve memory, ignore `/memory`. Just tell Claude "update h1ve" — the assistant edits `~/h1ve/memory/` files (kb.md, decisions.md, claude/*.md) directly with its tools, and the SessionEnd/PreCompact hooks sync them.
+* **Recurrence risk:** The name implies it manages memory; it only edits raw files. Surface this proactively whenever the user reaches for `/memory`.
+
 ---
 
 ## Networking
