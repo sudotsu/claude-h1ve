@@ -29,6 +29,47 @@ trap '
   echo "========================================="
 ' ERR
 
+check_orphaned_gitlinks() {
+  local entry mode path key configured_path section url
+  local -a orphaned=()
+
+  while IFS= read -r -d '' entry; do
+    mode=${entry%% *}
+    [ "$mode" = "160000" ] || continue
+    path=${entry#*$'\t'}
+    section=""
+
+    if [ -f .gitmodules ]; then
+      while read -r key configured_path; do
+        if [ "$configured_path" = "$path" ]; then
+          section=${key%.path}
+          url=$(git config -f .gitmodules --get "${section}.url" 2>/dev/null || true)
+          [ -n "$url" ] && break
+          section=""
+        fi
+      done < <(git config -f .gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null || true)
+    fi
+
+    [ -n "$section" ] || orphaned+=("$path")
+  done < <(git ls-files --stage -z)
+
+  if [ ${#orphaned[@]} -eq 0 ]; then
+    return 0
+  fi
+
+  echo ""
+  echo "ERROR: orphaned gitlink(s) detected — refusing to commit:" >&2
+  printf '  - %s\n' "${orphaned[@]}" >&2
+  echo "" >&2
+  echo "Each mode-160000 entry must have a matching path and URL in .gitmodules." >&2
+  echo "Preserve any nested checkout and uncommitted work before repairing it." >&2
+  echo "For normal H1VE project context, remove the gitlink from the index:" >&2
+  echo "  git rm --cached -- <path>" >&2
+  echo "Then replace it with normal files. If it is an intentional submodule," >&2
+  echo "add or repair its .gitmodules path and URL before re-running sync." >&2
+  return 1
+}
+
 # Stash any uncommitted changes so pull --rebase doesn't choke
 if [ -n "$(git status --porcelain)" ]; then
   echo "Stashing local changes..."
@@ -73,6 +114,7 @@ fi
 if [ -n "$(git status --porcelain)" ]; then
   echo "Changes detected, syncing..."
   git add -A
+  check_orphaned_gitlinks
   git commit -m "sync: $(hostname) $(date +%Y-%m-%d-%H%M)"
   if git push; then
     TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
