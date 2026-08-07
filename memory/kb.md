@@ -48,6 +48,12 @@ Structured reference of discovered facts, gotchas, and system behaviors that are
 * **Execution/Fix:** **User:** no action needed — nothing is wrong, no data is lost. **Agent:** do not panic or assume external interference. Run `git fetch origin` first to confirm the remote-only commits are from `localhost` (this phone). Then `git merge origin/master --no-edit` (not rebase — rebase requires a clean working tree and is harder to recover). Resolve any conflicts (likely only in `memory/kb.md` or `machines/s25-termux/machine.md`), then push. If merge is also blocked by unstaged changes, `git stash`, merge, push, `git stash drop`.
 * **Recurrence risk:** Looks like external interference from another machine — the instinct is to investigate who pushed, or worse, force-push to fix it. Both responses are wrong and the latter destroys work.
 
+### Stale "PREVIOUS SYNC FAILED" banner + machine stranded on an agent branch
+* **Symptom/Context:** `session-start.sh` prints `=== H1VE: PREVIOUS SYNC FAILED ===` with a weeks-old timestamp and a merge-conflict message, but `git status` shows a clean tree, `git stash list` is empty, and there are no conflicted files. (Observed 2026-08-07 on desktop-gaming: banner dated 2026-07-26.)
+* **Root Cause/Mechanic:** Two independent problems that present as one. (1) `sync.sh` writes `FAILED <ts>` to `scratch/last-sync-status` but nothing clears it when a human resolves the conflict by hand — the banner then cries wolf indefinitely. (2) The real breakage: the machine was left checked out on a feature branch (`agent/animate-h1ve-readme`) and never returned to `master`. `sync.sh` operates on whatever branch is checked out, so it kept syncing the agent branch while `master` fell 6 commits behind. **Note the default branch is `master`, not `main`** — `origin/main` does not exist and commands referencing it fail with `ambiguous argument`.
+* **Execution/Fix:** Diagnose in this order: `git status` (clean? then the banner is stale, ignore it), `git branch -vv` (on master? behind?). Before switching, confirm nothing is lost: `git log --oneline origin/master..HEAD` — empty output means the branch is fully merged and it's safe. Then `git checkout master && git pull`, and clear the stale flag: `echo "OK $(date +'%Y-%m-%d %H:%M:%S')" > scratch/last-sync-status`.
+* **Recurrence risk:** The banner's message actively misdirects — it names a merge conflict that no longer exists, so the obvious move is hunting for conflicts and concluding it's fine when the actual problem (wrong branch, silently not syncing) is invisible unless you check `git branch -vv`. Any agent-branch workflow can strand a machine this way.
+
 ---
 
 ## Termux / Android
@@ -84,9 +90,15 @@ Structured reference of discovered facts, gotchas, and system behaviors that are
 
 ### Next.js 16 build fails on Termux (Turbopack WASM limitation)
 * **Symptom/Context:** `npm run build` in a Next.js 16 project on Termux fails with `turbo.createProject is not supported by the wasm bindings`.
-* **Root Cause/Mechanic:** Next.js 16 defaults to Turbopack for production builds. On Termux, native SWC bindings aren't available so it falls back to WASM bindings, which don't implement `createProject`. There is no `--no-turbopack` flag for `next build` in this version.
-* **Execution/Fix:** Use `npx tsc --noEmit` for type checking locally. Push to GitHub and let Vercel build — Vercel has native bindings and builds correctly. Do not attempt to build Next.js 16 locally on Termux.
+* **Root Cause/Mechanic:** Next.js 16 defaults to Turbopack for production builds. On Termux, native SWC bindings aren't available so it falls back to WASM bindings, which don't implement `createProject`.
+* **Execution/Fix:** Next.js 16.3 **does** accept `next build --webpack` (supersedes the earlier note here that no opt-out flag existed — verify it works on Termux before relying on it, as the SWC binding problem may persist independently of the bundler). Otherwise: use `npx tsc --noEmit` for type checking locally, push to GitHub and let Vercel build — Vercel has native bindings and builds correctly.
 * **Recurrence risk:** The error message doesn't explain why WASM bindings are being used or that Vercel is the correct build environment — the instinct is to debug the Turbopack config, which is a dead end.
+
+### Next.js 16 + Tailwind v4 build fails on WSL2 (Turbopack PostCSS worker pool)
+* **Symptom/Context:** `next build` dies at `Execution of PostCssTransformedAsset::process failed` → `creating new process` → `node process exited before we could connect to it with exit status: 0`. Empty process output. Reproduces on a completely untouched `create-next-app` scaffold, so it is never project code.
+* **Root Cause/Mechanic:** Turbopack processes `postcss.config.mjs` in a **Node.js worker pool** (documented at `node_modules/next/dist/docs/01-app/03-api-reference/08-turbopack.md`, "PostCSS" row). On desktop-gaming's WSL2 that worker exits status 0 before Turbopack connects, so every Tailwind v4 build fails. Not caused by the fnm multishell node path (`/mnt/wslg/runtime-dir/...`) — tested by running the build with the real `~/.local/share/fnm/...` binary and it fails identically. Adding `postcss` as an explicit dep (pnpm isolated node_modules doesn't hoist it) also does not fix it.
+* **Execution/Fix:** Pin both scripts to webpack — `"dev": "next dev --webpack"`, `"build": "next build --webpack"`. Builds clean. Keep `build` on webpack too so Vercel uses the same bundler as local and can't diverge. Confirmed working on `second-storey-painting` and already the pattern in `omahatreecare-next`.
+* **Recurrence risk:** The stack trace points at CSS, so the instinct is to debug the Tailwind theme or `globals.css` — a dead end that can burn an hour. Isolate in one step by replacing `globals.css` with a single `@import "tailwindcss";` line: if it still fails, it's environmental. Hits every new Next 16 project on this machine.
 
 ---
 
