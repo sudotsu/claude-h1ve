@@ -1,5 +1,12 @@
 # Architectural Decisions
 
+## 2026-09-06: dell-precision-omarchy onboarded in manual / hookless mode
+**Decision:** New machine profile `machines/dell-precision-omarchy/` (Dell Precision 3490, Omarchy 4.0.2 = Arch + Hyprland) added as the primary daily-driver laptop. It runs h1ve **without any hooks** — no SessionStart, SessionEnd, PreCompact, or PostToolUse entries in `~/.claude/settings.json`. The `~/.claude/CLAUDE.md` symlink and `autoMemoryDirectory` → `~/h1ve/memory/claude` are set the normal way; only the automation is omitted. Sync is manual: the agent runs `git -C ~/h1ve pull` at session start and `bash ~/h1ve/scripts/sync.sh` at session end or on request. `setup-machine.sh` was deliberately **not** run (it force-enforces the four hooks).
+
+**Why:** AJ's stated reasons — (1) he considers h1ve "too dependent on silent-failing hooks" and wants to drive sync by hand while he's learning Arch on this machine; (2) the machine is his new main box and he wants to build the habit deliberately rather than trust automation he can't see. Worth noting the counter-evidence surfaced in the same session: every silent-hook-failure entry in `kb.md` is Windows/WSL or Termux path-resolution — native Arch is the environment where the hooks are *least* fragile. Manual mode trades that reliability for visibility and reintroduces the "arrived stale / forgot to push" risk `kb.md` already documents. Accepted as a deliberate, revisitable choice.
+
+**Fallback if manual mode proves too lossy:** the guarded `Stop` / dirty-worktree-check design in `docs/superpowers/specs/2026-07-10-codex-h1ve-integration-design.md` — fire `sync.sh` only on turns where the h1ve worktree actually changed, so read-only turns cost nothing. This is also the unresolved thread from the 2026-06-09 entry below (whether to keep a purpose-built `Stop` for per-change sync).
+
 ## 2026-06-09: Known limitation — conversational decisions that go unrecognized are permanently lost
 **Situation:** During a session on desktop-gaming (WSL), the `Stop` hook was found still present in `~/.claude/settings.json` alongside `SessionEnd` and `PreCompact`. The documented decision (2026-02-19, updated 2026-05-19) clearly states `Stop` was replaced by `SessionEnd` + `PreCompact` once its per-turn semantics were confirmed. However, there was a prior conversation specifically about whether to intentionally keep `Stop` for a different purpose (per-turn sync if docs changed) — and the outcome of that conversation was never logged. That outcome is now permanently unrecoverable.
 
