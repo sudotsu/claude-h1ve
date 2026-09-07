@@ -59,7 +59,7 @@ cp ~/hive/shared/settings.json ~/.claude/settings.json
 
 ## H1VE Session Protocol
 **On session start** (do this before responding to the user's first message, regardless of what they asked):
-1. `git pull` is automatic — a `SessionStart` hook runs `scripts/session-start.sh` which pulls the repo at session begin (matched on `startup|resume|clear` subtypes). You do not need to pull manually.
+1. **Pull latest.** On hook-wired machines this is automatic — a `SessionStart` hook runs `scripts/session-start.sh` at session begin (matched on `startup|resume|clear` subtypes). **On MANUAL / HOOKLESS machines** (the machine profile above declares this): run `git -C ~/h1ve pull` yourself before relying on h1ve context, and read what changed.
 2. `session-start.sh` outputs a full diff of everything that changed since this machine's last session — read that output. If nothing changed, it prints nothing and you can confirm you're current.
 3. Auto-memory (`~/h1ve/memory/claude/MEMORY.md`) is loaded automatically at session start — no need to read it manually. It contains cross-machine learnings written by Claude instances on all machines.
 4. Check the **root** `~/h1ve/handoffs/` directory (do NOT read `handoffs/archive/`) for any open handoffs addressed to claude — surface them to the user immediately
@@ -69,7 +69,7 @@ cp ~/hive/shared/settings.json ~/.claude/settings.json
 - `memory/kb.md` — high-signal technical gotchas only: tool quirks, system behaviors, hard-won fixes that would bite you again. Edit in-place, update superseded entries, never just append. High bar — if it wouldn't recur, skip it.
 - `memory/decisions.md` — architectural decisions made this session. Auto-memory doesn't capture these. If a decision was reached (not just discussed), write it with reasoning before the session ends. `memory/shared.md` and `memory/projects.md` are for machine inventory and project state that needs to survive model changes — update them if the setup or a project's status changed materially.
 
-**Sync is automatic** — a `SessionEnd` hook runs `~/h1ve/scripts/sync.sh` when the session ends, and a `PreCompact` hook runs it before any context compaction (manual or auto). No manual sync needed. If you need to sync mid-session for any other reason, run it manually: `bash ~/h1ve/scripts/sync.sh`
+**Sync.** On hook-wired machines this is automatic — a `SessionEnd` hook runs `~/h1ve/scripts/sync.sh` at session end and a `PreCompact` hook runs it before any context compaction (manual or auto). **On MANUAL / HOOKLESS machines: run `bash ~/h1ve/scripts/sync.sh` yourself** at session end and whenever the user asks. Either way you can run it manually mid-session anytime.
 
 ## H1VE Operational Rules
 
