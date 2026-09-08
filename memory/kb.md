@@ -204,6 +204,13 @@ Structured reference of discovered facts, gotchas, and system behaviors that are
 * **Execution/Fix:** Drive bash under `pty.fork()` from Python and reply `\x1b[0n` to `\x1b[5n`. Always include a `--no-dsr` control run that must FAIL, otherwise the test passes whether or not the mechanism works. Also: have the harness send Ctrl-C before `exit`, or a leftover readline buffer gets submitted on teardown and runs a command nobody asked for.
 * **Recurrence risk:** Without the control run this is a test that proves nothing. The teardown bug also produced a convincing false "the lesson fired twice" bug report that cost real debugging time.
 
+### `hyprctl keyword` is dead on a Lua-configured Hyprland — use `hyprctl eval`
+* **Symptom/Context:** Applied window rules at runtime with `hyprctl keyword windowrule "float, class:^(x)$"`. The window opened tiled at the wrong size — rule silently had no effect. `hyprctl configerrors` was empty, so nothing looked wrong.
+* **Root Cause/Mechanic:** Omarchy configures Hyprland in **Lua**, so Hyprland runs a non-legacy parser. `hyprctl keyword` returns the literal string `keyword can't work with non-legacy parsers. Use eval.` — a *successful* exit with an error in stdout, which is invisible if you redirect output to /dev/null (and every example online redirects it). Essentially every Hyprland guide on the internet says to use `keyword`.
+* **Execution/Fix:** `hyprctl eval '<lua>'` instead, using omarchy's own helper: `hyprctl eval 'o.window("^(app.id)$", { float = true, size = { 640, 900 } })'`. Returns `ok`. Verified: `hyprctl -j clients` then showed `floating: True, size: [640,900]`. Persistent rules go in `~/.config/hypr/*.lua` via `o.window(match, rules)` — see `/usr/share/omarchy/default/hypr/apps/webcam-overlay.lua` for the canonical example (dedicated app-id + float + size + move).
+* **Recurrence risk:** High, and doubly so while learning Hyprland from `.conf`-era guides. The failure is silent, `configerrors` stays clean, and the diagnostic string only appears if you actually read hyprctl's stdout. `move` with percentage strings (`"100%-680"`) also did not position as expected in the same test — size/float applied, position did not; syntax still unconfirmed.
+
+
 ---
 
 ## Agent handoffs & multi-tool workflows
