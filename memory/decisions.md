@@ -180,3 +180,18 @@
 **Why:** AJ had zero coding experience and taught himself enough to direct AI competently. The scarce artifact is not the working tool — millions are shipping those — it's an honest record of the direction skill, including failures. The code is evidence that the account is true. Without the category, genuinely valuable work (OTC tools, kenoengine) fails the catalog's "AI in the project itself" test and has nowhere to go.
 
 **Consequences:** The five Omaha Tree Care homeowner tools go to `case-studies/otc-tools/` rather than a standalone `otc-tools` repo — AJ's reasoning: alone it has no answer to "why the fuck does this exist," and the surrounding catalog supplies the context that makes it legible. Kenowheel moves here too, which dissolves a framing problem: as a `tools/` entry it would have implied a gambling-outcome claim it cannot support; as a case study the claim becomes "here is what I built and how," which is verifiable. Explicitly NOT applied to `sentinel` (extracted from the dead AxProtocol) — it has standalone utility, so it belongs in `tools/`. The line: case studies are artifacts whose value is the account of building them; tools are artifacts whose value is using them.
+
+## 2026-09-07: archtutor teaches pacman rather than wrapping apt
+
+**Decision:** When archtutor catches a Debian command, it cancels it, explains the Arch equivalent, and puts that command in the user's prompt to run themselves. It never translates-and-executes.
+
+**Why:** The existing tools in this space (aptpac, pac, pac-get) emulate apt on top of pacman. They work, and they are why people run Arch for a year without learning pacman — the abstraction removes exactly the friction that teaches. Cancelling costs one keystroke and converts every mistake into the one repetition that makes it stick. The decay mechanic is what makes that bearable: three full lessons, three reminders, then silence, so the friction is bounded and self-terminating.
+
+**Consequences:** `danger` class is exempt from decay — a command that destroys a disk is not something you earn the right to skip. Correction injection uses a readline macro bound to a Device Status Report reply rather than rebinding Enter, because a `bind -x` widget cannot accept a line and rebinding Enter would put terminal trickery on the path of every command typed, not just the intercepted ones.
+
+## 2026-09-07: archtutor ships as a standalone public repo, not a h1ve project
+
+**Decision:** `~/archtutor` + github.com/sudotsu/archtutor, MIT, built to shipping standard (content packs as a distro-extension seam, pty-driven test suite, benchmark with a failing budget) rather than as personal shell config.
+
+**Why:** AJ's stated position — "it's for me, but if we build it good enough I want others to have it too, especially with Arch, these people are big into docs and learning/teaching others." Per [[feedback_quality_standard]], anything with a user besides AJ has to compete with the strongest thing in its category; here the category is genuinely weak, so that bar is reachable.
+

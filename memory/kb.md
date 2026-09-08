@@ -167,6 +167,45 @@ Structured reference of discovered facts, gotchas, and system behaviors that are
 
 ---
 
+## Bash interactive-shell hooking (archtutor)
+
+### DEBUG trap + `extdebug` is the only way to cancel a command before it runs
+* **Symptom/Context:** Wanted to intercept a typed command, show something, and stop it from executing. `bash-preexec`/`preexec` cannot cancel; rebinding Enter with `bind -x` cannot *accept* a line, so the 99% pass-through case needs macro chaining or keystroke re-injection.
+* **Root Cause/Mechanic:** `shopt -s extdebug` makes a non-zero return from a `DEBUG` trap skip the next command. That is the whole mechanism, and it is the only supported one. Verified on bash 5.3.15. The trap fires *after* Enter, before execution — genuinely-before-Enter is not achievable without owning the Enter key.
+* **Execution/Fix:** `shopt -s extdebug; trap 'if [[ <gate> ]]; then handler "$BASH_COMMAND"; fi' DEBUG`. Return 1 from the handler to cancel.
+* **Recurrence risk:** Two footguns that silently break the shell. (1) Write the gate as `[[ ... ]] && handler` and a *failed gate* returns non-zero → every command gets cancelled; `if`/`fi` returns 0 instead. (2) `((counter++))` returns non-zero when the pre-value is 0, so arithmetic near the end of a DEBUG handler cancels commands at random.
+
+### `extdebug` means ~60 trap fires per prompt, and one of them is starship's PS0
+* **Symptom/Context:** Interception silently did nothing — `apt install x` printed no lesson and ran anyway.
+* **Root Cause/Mechanic:** `extdebug` implies function tracing, so the trap is inherited by functions, subshells and command substitutions. On Omarchy (starship + mise + zoxide + systemd-osc-context) that is ~60 fires per prompt. Worse, starship on bash ≥4.4 puts its command timer in `PS0`, which bash expands *after reading the command but before running it* — so a naive "first fire after the prompt" flag is consumed by starship's timer subshell and the user's command is never seen.
+* **Execution/Fix:** Gate on all three: `_ARMED == 1` (set from a `PROMPT_COMMAND` entry appended **last**), `BASH_SUBSHELL == 0` (rejects PS0 and every command substitution), `${#FUNCNAME[@]} == 0` (rejects anything inside a prompt hook). Keep the gate inline in the trap string so the 60 rejected fires never pay a function call: ~22 µs/fire, ~1.3 ms/prompt.
+* **Recurrence risk:** The failure is silent and looks like "my hook didn't install". Tracing every fire with `subsh`/`funcdepth`/`BASH_COMMAND` is what makes it obvious in about a minute.
+
+### `$BASH_COMMAND` is rewritten inside the handler, and is only the first pipeline stage
+* **Symptom/Context:** Handler read `$BASH_COMMAND` and got its own first statement instead of the user's command.
+* **Root Cause/Mechanic:** Function tracing (from `extdebug`) updates `BASH_COMMAND` per command, including inside the handler. Separately, for `a | b` the top-level fire carries only `a`.
+* **Execution/Fix:** Capture it in the trap *string* and pass it as `$1`. Use it as a cheap prefilter; read the full typed line from `history 1` — but only after the prefilter hits, since command substitution costs ~400 µs.
+
+### `[[ =~ ]]` clobbers BASH_REMATCH — including a regex used to test one character
+* **Symptom/Context:** A template expander substituted `\1..\9` from `BASH_REMATCH` and every capture came out empty, so `apt install neovim` produced `pacman -S ` with no package.
+* **Root Cause/Mechanic:** `BASH_REMATCH` is global and rewritten by *every* `[[ =~ ]]`. The expander used `[[ ${c} =~ [1-9] ]]` to test whether a character was a digit, which replaced the captures with the digit match before reading them. It survives function calls and command substitution fine — the clobber was self-inflicted.
+* **Execution/Fix:** Snapshot `local -a caps=("${BASH_REMATCH[@]}")` on entry, and use `case` not a regex for trivial character tests.
+* **Recurrence risk:** High. It reads as a scoping problem, so the instinct is to chase subshells; the actual culprit is three lines below. It also passed a test suite that asserted the matched rule but never the substituted output.
+
+### Omarchy aliases `cd`, which corrupts the `$(cd … && pwd)` script-dir idiom
+* **Symptom/Context:** A sourced script resolved its own directory to `󱞩 /home/sudotsu/archtutor` and every `-r` file test then failed. Worked non-interactively, failed only in a real interactive shell.
+* **Root Cause/Mechanic:** `/usr/share/omarchy/default/bash/aliases` sets `alias cd="zd"`, a zoxide wrapper that **prints** the directory it moves to. Aliases are expanded in interactive shells, so the command substitution captured the decoration along with the path.
+* **Execution/Fix:** `$(CDPATH= builtin cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && builtin pwd -P)`. `builtin` bypasses both aliases and functions.
+* **Recurrence risk:** Affects the single most copy-pasted line in shell scripting, and only in interactive shells — so it passes every `bash -c` test. Any machine with a zoxide/`cd` wrapper hits it.
+
+### Testing interactive shell behaviour needs a pty that answers DSR
+* **Symptom/Context:** Piping a heredoc into `bash -i` cannot test readline behaviour, and a feature that writes into the next prompt via `printf '\e[5n'` never fires because nothing answers the terminal query.
+* **Root Cause/Mechanic:** Writing into the *next* prompt's buffer requires binding a readline macro to the Device Status Report reply (`bind '"\e[0n": "text"'` then `printf '\e[5n'`) — the fzf trick. Only a real terminal answers, and `script`-with-piped-stdin does not.
+* **Execution/Fix:** Drive bash under `pty.fork()` from Python and reply `\x1b[0n` to `\x1b[5n`. Always include a `--no-dsr` control run that must FAIL, otherwise the test passes whether or not the mechanism works. Also: have the harness send Ctrl-C before `exit`, or a leftover readline buffer gets submitted on teardown and runs a command nobody asked for.
+* **Recurrence risk:** Without the control run this is a test that proves nothing. The teardown bug also produced a convincing false "the lesson fired twice" bug report that cost real debugging time.
+
+---
+
 ## Agent handoffs & multi-tool workflows
 
 ### A prior agent's "completion report" is not evidence the work exists
